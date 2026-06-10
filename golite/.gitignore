@@ -1,0 +1,80 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+pom.xml.bak
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+gradle/
+gradlew
+gradlew.bat
+*.gradle
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+nbproject/
+.classpath
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Lex/Flex (Lexer generation)
+*.l.c
+*.l.cpp
+lex.yy.c
+lex.yy.cpp
+
+# Yacc/Bison (Parser generation)
+y.tab.c
+y.tab.h
+*.output
+*.parser.c
+*.parser.h
+
+# Compilation output
+*.o
+*.so
+*.dylib
+*.exe
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.temp
+*.backup
