@@ -1,13 +1,18 @@
-# Java
+##############################
+## Java
+##############################
+.mtj.tmp/
 *.class
 *.jar
 *.war
 *.ear
-*.zip
-*.tar.gz
-*.rar
+*.nar
+hs_err_pid*
+replay_pid*
 
-# Maven
+##############################
+## Maven
+##############################
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -20,61 +25,66 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Gradle
-.gradle/
+##############################
+## Gradle
+##############################
+bin/
 build/
-gradle/
-gradlew
-gradlew.bat
-*.gradle
+.gradle
+.gradletasknamecache
+gradle-app.setting
+!gradle-wrapper.jar
 
-# IDE
-.vscode/
+##############################
+## IntelliJ
+##############################
+out/
 .idea/
+.idea_modules/
 *.iml
-*.iws
 *.ipr
-*.swp
-*.swo
-*~
-.DS_Store
-nbproject/
+*.iws
+
+##############################
+## Eclipse
+##############################
+.settings/
+bin/
+tmp/
+.metadata
 .classpath
 .project
-.settings/
-*.sublime-project
-*.sublime-workspace
-
-# Lex/Flex (Lexer generation)
-*.l.c
-*.l.cpp
-lex.yy.c
-lex.yy.cpp
-
-# Yacc/Bison (Parser generation)
-y.tab.c
-y.tab.h
-*.output
-*.parser.c
-*.parser.h
-
-# Compilation output
-*.o
-*.so
-*.dylib
-*.exe
-
-# OS
-Thumbs.db
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Logs
-*.log
-logs/
-
-# Temp files
 *.tmp
-*.temp
-*.backup
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.factorypath
+
+##############################
+## NetBeans
+##############################
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+##############################
+## Visual Studio Code
+##############################
+.vscode/
+.code-workspace
+
+##############################
+## OS X
+##############################
+.DS_Store
+
+##############################
+## Miscellaneous
+##############################
+*.log
