@@ -1,6 +1,8 @@
 package olc1.golite;
 
-// importaciones necesarias
+// ============================================================
+// IMPORTACIONES
+// ============================================================
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,66 +13,540 @@ import olc1.golite.ast.exp.*;
 import olc1.golite.ast.stm.*;
 import olc1.golite.reports.GoliteError;
 
+// ============================================================
+// CODIGO DEL PARSER
+// ============================================================
 parser code
 {:
     public final List<GoliteError> errors = new ArrayList<>();
 
     public void syntax_error(Symbol s) {
-        errors.add(new GoliteError("Sintactico", "Simbolo inesperado: " + s.value, s.left, s.right));
+        errors.add(new GoliteError(
+            "Sintactico",
+            "Simbolo inesperado: '" + s.value + "'",
+            s.left,
+            s.right
+        ));
     }
 
     public void unrecovered_syntax_error(Symbol s) {
-        errors.add(new GoliteError("Sintactico", "Simbolo inesperado no recuperable: " + s.value, s.left, s.right));
+        errors.add(new GoliteError(
+            "Sintactico",
+            "Error sintactico no recuperable cerca de: '" + s.value + "'",
+            s.left,
+            s.right
+        ));
     }
 :}
 
-action code
-{:
-    String consola = "";
-:}
+// ============================================================
+// TERMINALES
+// ============================================================
 
-terminal String string, integer, decimal;
-terminal lparen, rparen, lbrace, rbrace;
-terminal plus, minus, times, slash, UMENOS;
-terminal scol, assign;
-terminal String id;
-terminal imprimir, kwTrue, kwFalse, kwIf;
+// --- Literales (sin cambios) ---
+terminal String  string;
+terminal String  integer;
+terminal String  decimal;
+terminal String  id;
 
-nonterminal Statments INICIO;
-nonterminal Statments INSTRUCCIONES;
-nonterminal ASTNode INSTRUCCION;
-nonterminal ASTNode EXPRESION;
+// AGREGADO: Literal rune con comilla simple ('A')
+terminal String  rune;
 
+// --- Simbolos de agrupacion (sin cambios) ---
+terminal lparen;     // (
+terminal rparen;     // )
+terminal lbrace;     // {
+terminal rbrace;     // }
+
+// AGREGADO: Corchetes para slices (Fase 2, declarados aqui para no romper el lexer)
+terminal lbracket;   // [
+terminal rbracket;   // ]
+
+// --- Operadores aritmeticos (sin cambios) ---
+terminal plus;       // +
+terminal minus;      // -
+terminal times;      // *
+terminal slash;      // /
+
+// AGREGADO: Modulo
+terminal mod;        // %
+
+// --- Operador de asignacion (sin cambios) ---
+terminal assign;     // =
+
+// AGREGADO: Declaracion con inferencia de tipo
+terminal declare;    // :=
+
+// AGREGADO: Operadores de asignacion compuesta
+terminal plusAssign;   // +=
+terminal minusAssign;  // -=
+
+// AGREGADO: Incremento y decremento
+terminal inc;          // ++
+terminal dec;          // --
+
+// AGREGADO: Operadores de comparacion
+terminal eq;           // ==
+terminal neq;          // !=
+terminal lt;           // <
+terminal gt;           // >
+terminal lteq;         // <=
+terminal gteq;         // >=
+
+// AGREGADO: Operadores logicos
+terminal and;          // &&
+terminal or;           // ||
+terminal not;          // !
+
+// AGREGADO: Simbolos de puntuacion nuevos
+terminal dot;          // .   (para fmt.Println y struct.campo)
+terminal comma;        // ,   (para separar argumentos)
+terminal colon;        // :   (para switch-case Fase 2)
+
+// --- Punto y coma (sin cambios) ---
+terminal scol;         // ;
+
+// --- Palabras reservadas que ya existian ---
+terminal kwTrue;
+terminal kwFalse;
+terminal kwIf;
+
+// ELIMINADO: terminal imprimir
+// Razon: GoLite usa fmt.Println, no imprimir()
+
+// AGREGADO: Palabras reservadas nuevas
+terminal kwFunc;       // func
+terminal kwVar;        // var
+terminal kwElse;       // else
+terminal kwFor;        // for
+terminal kwBreak;      // break
+terminal kwContinue;   // continue
+terminal kwReturn;     // return
+terminal kwNil;        // nil
+
+// AGREGADO: Tipos de datos como terminales
+terminal kwInt;        // int
+terminal kwFloat64;    // float64
+terminal kwString;     // string
+terminal kwBool;       // bool
+terminal kwRune;       // rune
+
+// AGREGADO: Para funciones embebidas
+terminal kwFmt;        // fmt
+
+// AGREGADO: Para Fase 2 (declarados para no romper el lexer)
+terminal kwSwitch;
+terminal kwCase;
+terminal kwDefault;
+terminal kwRange;
+terminal kwStruct;
+
+// Pseudo-terminal para precedencia de negacion unaria
+terminal UMENOS;
+
+// ============================================================
+// NO TERMINALES
+// ============================================================
+
+// MODIFICADO: El programa ahora tiene estructura func main() { }
+// Antes: nonterminal Statments INICIO
+// Ahora: INICIO representa el programa completo con func main
+nonterminal ASTNode          INICIO;
+nonterminal Statments        INSTRUCCIONES;
+nonterminal ASTNode          INSTRUCCION;
+nonterminal ASTNode          EXPRESION;
+
+// AGREGADO: No terminales nuevos para las nuevas estructuras
+nonterminal ASTNode          DECLARACION_VAR;    // var x int = 5  o  x := 5
+nonterminal ASTNode          ASIGNACION;         // x = 5
+nonterminal ASTNode          IF_STM;             // if / else if / else
+nonterminal ASTNode          FOR_STM;            // for con sus 3 variantes
+nonterminal ASTNode          BLOQUE;             // { instrucciones }
+nonterminal ASTNode          LLAMADA_FUNCION;    // fmt.Println(...) o funcion(...)
+nonterminal List<ASTNode>    ARGUMENTOS;         // lista de argumentos
+nonterminal List<ASTNode>    LISTA_ARGS;         // argumentos separados por coma
+nonterminal String           TIPO;               // int, float64, string, bool, rune
+nonterminal ASTNode          FOR_INIT;           // inicializacion del for clasico
+nonterminal ASTNode          FOR_UPDATE;         // actualizacion del for clasico
+
+// ============================================================
+// PRECEDENCIA Y ASOCIATIVIDAD
+// Orden de menor a mayor precedencia (el ultimo tiene mayor precedencia)
+// ============================================================
+
+// AGREGADO: Operadores logicos (menor precedencia)
+precedence left or;
+precedence left and;
+
+// AGREGADO: Operadores de comparacion
+precedence left eq, neq;
+precedence left lt, gt, lteq, gteq;
+
+// Operadores aritmeticos (sin cambios en orden, se agregan mas)
 precedence left plus, minus;
-precedence left times, slash;
-precedence right UMENOS;
+precedence left times, slash, mod;
 
+// AGREGADO: NOT logico y negacion unaria (mayor precedencia, derecha a izquierda)
+precedence right not, UMENOS;
+
+// ============================================================
+// PUNTO DE INICIO
+// ============================================================
 start with INICIO;
 
-// Gramatica
+// ============================================================
+// GRAMATICA
+// ============================================================
 
-INICIO ::= INSTRUCCIONES:i   {: RESULT = i; :}
+// ------------------------------------------------------------
+// INICIO DEL PROGRAMA
+// MODIFICADO: Antes eran instrucciones sueltas
+// Ahora: GoLite requiere func main() { ... } como punto de entrada
+// Tambien permite declaraciones globales antes de main (para Fase 2)
+// ------------------------------------------------------------
+INICIO ::= kwFunc id lparen rparen lbrace INSTRUCCIONES:i rbrace
+                {: RESULT = i; :}
+         | kwFunc id lparen rparen lbrace rbrace
+                {: RESULT = new Statments(null); :}
+         | error
+                {: RESULT = null; :}
 ;
 
-INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i     {: is.add(i); RESULT = is; :}
-                | INSTRUCCION:i                      {: RESULT = new Statments(i); :}
+// ------------------------------------------------------------
+// LISTA DE INSTRUCCIONES
+// Sin cambios en estructura, pero acepta mas tipos de instruccion
+// ------------------------------------------------------------
+INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
+                    {:
+                        if (i != null) is.add(i);
+                        RESULT = is;
+                    :}
+                | INSTRUCCION:i
+                    {:
+                        RESULT = new Statments(i);
+                    :}
 ;
 
-INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT = new Imprimir(e); :}
-              | id:n assign EXPRESION:e scol                          {: RESULT = new Assign(n, e, nleft, nright); :}
-              | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace {: RESULT = new IfNode(c, b); :}
-              | error scol                                                {: RESULT = null; :}
+// ------------------------------------------------------------
+// INSTRUCCIONES INDIVIDUALES
+// MODIFICADO: Se agregan muchas nuevas instrucciones
+// ELIMINADO: imprimir lparen EXPRESION rparen scol
+// AGREGADO: fmt.Println, var, :=, if-else, for, break, continue, bloques
+// ------------------------------------------------------------
+INSTRUCCION ::=
+    // AGREGADO: Declaracion con var y tipo explicito
+    DECLARACION_VAR:d
+        {: RESULT = d; :}
+
+    // MODIFICADO: Asignacion simple (antes era la unica instruccion)
+    | ASIGNACION:a
+        {: RESULT = a; :}
+
+    // AGREGADO: Asignacion compuesta +=
+    | id:n plusAssign EXPRESION:e
+        {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+    | id:n plusAssign EXPRESION:e scol
+        {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+
+    // AGREGADO: Asignacion compuesta -=
+    | id:n minusAssign EXPRESION:e
+        {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+    | id:n minusAssign EXPRESION:e scol
+        {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+
+    // AGREGADO: Incremento i++
+    | id:n inc
+        {: RESULT = new Increment(n, nleft, nright); :}
+    | id:n inc scol
+        {: RESULT = new Increment(n, nleft, nright); :}
+
+    // AGREGADO: Decremento i--
+    | id:n dec
+        {: RESULT = new Decrement(n, nleft, nright); :}
+    | id:n dec scol
+        {: RESULT = new Decrement(n, nleft, nright); :}
+
+    // AGREGADO: fmt.Println(args...)
+    | kwFmt dot id lparen ARGUMENTOS:args rparen
+        {: RESULT = new FmtPrintln(args, -1, -1); :}
+    | kwFmt dot id lparen ARGUMENTOS:args rparen scol
+        {: RESULT = new FmtPrintln(args, -1, -1); :}
+
+    // AGREGADO: Llamada a funcion como instruccion
+    | id:n lparen ARGUMENTOS:args rparen
+        {: RESULT = new FuncCall(n, args, nleft, nright); :}
+    | id:n lparen ARGUMENTOS:args rparen scol
+        {: RESULT = new FuncCall(n, args, nleft, nright); :}
+
+    // AGREGADO: if / else if / else
+    | IF_STM:i
+        {: RESULT = i; :}
+
+    // AGREGADO: for en sus variantes
+    | FOR_STM:f
+        {: RESULT = f; :}
+
+    // AGREGADO: break
+    | kwBreak
+        {: RESULT = new BreakNode(-1, -1); :}
+    | kwBreak scol
+        {: RESULT = new BreakNode(-1, -1); :}
+
+    // AGREGADO: continue
+    | kwContinue
+        {: RESULT = new ContinueNode(-1, -1); :}
+    | kwContinue scol
+        {: RESULT = new ContinueNode(-1, -1); :}
+
+    // AGREGADO: return con valor
+    | kwReturn EXPRESION:e
+        {: RESULT = new ReturnNode(e, -1, -1); :}
+    | kwReturn EXPRESION:e scol
+        {: RESULT = new ReturnNode(e, -1, -1); :}
+
+    // AGREGADO: return sin valor
+    | kwReturn
+        {: RESULT = new ReturnNode(null, -1, -1); :}
+    | kwReturn scol
+        {: RESULT = new ReturnNode(null, -1, -1); :}
+
+    // AGREGADO: Bloque independiente { ... }
+    | BLOQUE:b
+        {: RESULT = b; :}
+
+    // Recuperacion de errores (sin cambios)
+    | error scol
+        {: RESULT = null; :}
+    | error rbrace
+        {: RESULT = null; :}
 ;
 
-EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
-            | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
-            | EXPRESION:a minus EXPRESION:b {: RESULT = new Sub(a, b); :}
-            | EXPRESION:a times EXPRESION:b {: RESULT = new Mul(a, b); :}
-            | EXPRESION:a slash EXPRESION:b {: RESULT = new Div(a, b); :}
-            | lparen EXPRESION:e rparen     {: RESULT = new Paren(e); :}
-            | kwTrue:t                      {: RESULT = new BoolLiteral(true,  tleft, tright); :}
-            | kwFalse:f                     {: RESULT = new BoolLiteral(false, fleft, fright); :}
-            | id:n                          {: RESULT = new VarRef(n, nleft, nright); :}
-            | integer:e                     {: RESULT = new Integers(new Integer(e), eleft, eright); :}
-            | decimal:e                     {: RESULT = new Decimal(new Double(e),   eleft, eright); :}
+// ------------------------------------------------------------
+// DECLARACION DE VARIABLES
+// AGREGADO: Completamente nuevo
+// Soporta: var x int = 5, var x int, x := 5
+// ------------------------------------------------------------
+DECLARACION_VAR ::=
+    // var x Tipo = expresion
+    kwVar id:n TIPO:t assign EXPRESION:e
+        {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+    | kwVar id:n TIPO:t assign EXPRESION:e scol
+        {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+
+    // var x Tipo  (sin valor inicial, toma valor por defecto)
+    | kwVar id:n TIPO:t
+        {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
+    | kwVar id:n TIPO:t scol
+        {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
+
+    // x := expresion  (inferencia de tipo)
+    | id:n declare EXPRESION:e
+        {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
+    | id:n declare EXPRESION:e scol
+        {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
+;
+
+// ------------------------------------------------------------
+// ASIGNACION SIMPLE
+// MODIFICADO: Antes tenia ; obligatorio, ahora es opcional
+// ------------------------------------------------------------
+ASIGNACION ::=
+    id:n assign EXPRESION:e
+        {: RESULT = new Assign(n, e, nleft, nright); :}
+    | id:n assign EXPRESION:e scol
+        {: RESULT = new Assign(n, e, nleft, nright); :}
+;
+
+// ------------------------------------------------------------
+// TIPOS DE DATOS
+// AGREGADO: Completamente nuevo
+// ------------------------------------------------------------
+TIPO ::=
+      kwInt      {: RESULT = "int"; :}
+    | kwFloat64  {: RESULT = "float64"; :}
+    | kwString   {: RESULT = "string"; :}
+    | kwBool     {: RESULT = "bool"; :}
+    | kwRune     {: RESULT = "rune"; :}
+;
+
+// ------------------------------------------------------------
+// BLOQUE DE INSTRUCCIONES { ... }
+// AGREGADO: Completamente nuevo
+// Permite bloques independientes y es usado por if, for, func
+// ------------------------------------------------------------
+BLOQUE ::=
+    lbrace INSTRUCCIONES:i rbrace
+        {: RESULT = i; :}
+    | lbrace rbrace
+        {: RESULT = new Statments(null); :}
+;
+
+// ------------------------------------------------------------
+// SENTENCIA IF / ELSE IF / ELSE
+// MODIFICADO: Antes solo habia if simple con parentesis obligatorios
+// Ahora: if-else completo, parentesis opcionales, sin ;
+// ------------------------------------------------------------
+IF_STM ::=
+    // if con parentesis
+    kwIf lparen EXPRESION:c rparen BLOQUE:b
+        {: RESULT = new IfNode(c, b, null); :}
+
+    // if sin parentesis
+    | kwIf EXPRESION:c BLOQUE:b
+        {: RESULT = new IfNode(c, b, null); :}
+
+    // if-else con parentesis
+    | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse BLOQUE:e
+        {: RESULT = new IfNode(c, b, e); :}
+
+    // if-else sin parentesis
+    | kwIf EXPRESION:c BLOQUE:b kwElse BLOQUE:e
+        {: RESULT = new IfNode(c, b, e); :}
+
+    // if-else if con parentesis
+    | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse IF_STM:ei
+        {: RESULT = new IfNode(c, b, ei); :}
+
+    // if-else if sin parentesis
+    | kwIf EXPRESION:c BLOQUE:b kwElse IF_STM:ei
+        {: RESULT = new IfNode(c, b, ei); :}
+;
+
+// ------------------------------------------------------------
+// SENTENCIA FOR
+// AGREGADO: Completamente nuevo
+// Variante 1: for condicion { }          (como while)
+// Variante 2: for init; cond; update { } (for clasico)
+// ------------------------------------------------------------
+FOR_STM ::=
+    // Variante 1: for condicion { }  (equivalente a while)
+    kwFor EXPRESION:c BLOQUE:b
+        {: RESULT = new ForNode(null, c, null, b); :}
+
+    // Variante 2: for init; cond; update { }
+    | kwFor FOR_INIT:ini scol EXPRESION:c scol FOR_UPDATE:upd BLOQUE:b
+        {: RESULT = new ForNode(ini, c, upd, b); :}
+;
+
+// ------------------------------------------------------------
+// INICIALIZACION DEL FOR CLASICO
+// AGREGADO: Completamente nuevo
+// Ejemplo: i := 0  o  var i int = 0
+// ------------------------------------------------------------
+FOR_INIT ::=
+    id:n declare EXPRESION:e
+        {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
+    | kwVar id:n TIPO:t assign EXPRESION:e
+        {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+    | ASIGNACION:a
+        {: RESULT = a; :}
+;
+
+// ------------------------------------------------------------
+// ACTUALIZACION DEL FOR CLASICO
+// AGREGADO: Completamente nuevo
+// Ejemplo: i++, i--, i = i + 1, i += 1
+// ------------------------------------------------------------
+FOR_UPDATE ::=
+    id:n inc
+        {: RESULT = new Increment(n, nleft, nright); :}
+    | id:n dec
+        {: RESULT = new Decrement(n, nleft, nright); :}
+    | id:n assign EXPRESION:e
+        {: RESULT = new Assign(n, e, nleft, nright); :}
+    | id:n plusAssign EXPRESION:e
+        {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+    | id:n minusAssign EXPRESION:e
+        {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+;
+
+// ------------------------------------------------------------
+// ARGUMENTOS DE FUNCION
+// AGREGADO: Completamente nuevo
+// Permite: fmt.Println(), fmt.Println(a), fmt.Println(a, b, c)
+// ------------------------------------------------------------
+ARGUMENTOS ::=
+    LISTA_ARGS:l  {: RESULT = l; :}
+    |             {: RESULT = new ArrayList<ASTNode>(); :}
+;
+
+LISTA_ARGS ::=
+    LISTA_ARGS:l comma EXPRESION:e
+        {:
+            l.add(e);
+            RESULT = l;
+        :}
+    | EXPRESION:e
+        {:
+            List<ASTNode> l = new ArrayList<ASTNode>();
+            l.add(e);
+            RESULT = l;
+        :}
+;
+
+// ------------------------------------------------------------
+// EXPRESIONES
+// MODIFICADO: Se agregan operadores de comparacion y logicos
+// AGREGADO: string literal, rune literal, nil, not, llamadas a funciones
+// ------------------------------------------------------------
+EXPRESION ::=
+    // Negacion unaria (sin cambios)
+    minus EXPRESION:a
+        {: RESULT = new Negate(a); :}
+        %prec UMENOS
+
+    // Operadores aritmeticos (sin cambios)
+    | EXPRESION:a plus  EXPRESION:b  {: RESULT = new Add(a, b); :}
+    | EXPRESION:a minus EXPRESION:b  {: RESULT = new Sub(a, b); :}
+    | EXPRESION:a times EXPRESION:b  {: RESULT = new Mul(a, b); :}
+    | EXPRESION:a slash EXPRESION:b  {: RESULT = new Div(a, b); :}
+
+    // AGREGADO: Modulo
+    | EXPRESION:a mod EXPRESION:b    {: RESULT = new Mod(a, b); :}
+
+    // AGREGADO: Operadores de comparacion
+    | EXPRESION:a eq   EXPRESION:b   {: RESULT = new Equal(a, b); :}
+    | EXPRESION:a neq  EXPRESION:b   {: RESULT = new NotEqual(a, b); :}
+    | EXPRESION:a lt   EXPRESION:b   {: RESULT = new LessThan(a, b); :}
+    | EXPRESION:a gt   EXPRESION:b   {: RESULT = new GreaterThan(a, b); :}
+    | EXPRESION:a lteq EXPRESION:b   {: RESULT = new LessEqual(a, b); :}
+    | EXPRESION:a gteq EXPRESION:b   {: RESULT = new GreaterEqual(a, b); :}
+
+    // AGREGADO: Operadores logicos
+    | EXPRESION:a and EXPRESION:b    {: RESULT = new And(a, b); :}
+    | EXPRESION:a or  EXPRESION:b    {: RESULT = new Or(a, b); :}
+
+    // AGREGADO: NOT logico
+    | not EXPRESION:a                {: RESULT = new Not(a); :}
+
+    // Agrupacion con parentesis (sin cambios)
+    | lparen EXPRESION:e rparen      {: RESULT = new Paren(e); :}
+
+    // Literales booleanos (sin cambios)
+    | kwTrue:t   {: RESULT = new BoolLiteral(true,  tleft, tright); :}
+    | kwFalse:f  {: RESULT = new BoolLiteral(false, fleft, fright); :}
+
+    // AGREGADO: Valor nil
+    | kwNil:n    {: RESULT = new NilLiteral(nleft, nright); :}
+
+    // Referencias a variables (sin cambios)
+    | id:n       {: RESULT = new VarRef(n, nleft, nright); :}
+
+    // Literales numericos (sin cambios)
+    | integer:e  {: RESULT = new Integers(Integer.parseInt(e),  eleft, eright); :}
+    | decimal:e  {: RESULT = new Decimal(Double.parseDouble(e), eleft, eright); :}
+
+    // MODIFICADO: String ya no usa new Integer(), usa directamente el valor
+    | string:e   {: RESULT = new StringLiteral(e, eleft, eright); :}
+
+    // AGREGADO: Literal rune
+    | rune:e     {: RESULT = new RuneLiteral(e, eleft, eright); :}
+
+    // AGREGADO: Llamada a funcion como expresion (ej: sumar(a, b))
+    | id:n lparen ARGUMENTOS:args rparen
+        {: RESULT = new FuncCall(n, args, nleft, nright); :}
+
+    // AGREGADO: fmt.Println como expresion (por si se usa dentro de otra expr)
+    | kwFmt dot id lparen ARGUMENTOS:args rparen
+        {: RESULT = new FmtPrintln(args, -1, -1); :}
 ;
