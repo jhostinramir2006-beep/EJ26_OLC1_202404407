@@ -144,4 +144,73 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         }
         return defaultVoid;
     }
+    @Override
+    public ValueWrapper visit(GreaterThan.Context ctx) {
+        ValueWrapper left  = Visit(ctx.left);
+        ValueWrapper right = Visit(ctx.right);
+
+        return switch (left) {
+            case IntValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() > r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() > r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() > r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() > r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + left.getTypeName() + " > " + right.getTypeName()
+            );
+        };
+    }
+    @Override
+    public ValueWrapper visit(LessThan.Context ctx) {
+        ValueWrapper left  = Visit(ctx.left);
+        ValueWrapper right = Visit(ctx.right);
+
+        return switch (left) {
+            case IntValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() < r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() < r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() < r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() < r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + left.getTypeName() + " < " + right.getTypeName()
+            );
+        };
+    }
+    @Override
+    public ValueWrapper visit(Equal.Context ctx) {
+        ValueWrapper left  = Visit(ctx.left);
+        ValueWrapper right = Visit(ctx.right);
+
+        return switch (left) {
+            case IntValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
+
+            case BoolValue l when right instanceof BoolValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
+
+            case StringValue l when right instanceof StringValue r ->
+                new BoolValue(l.value().equals(r.value()), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + left.getTypeName() + " == " + right.getTypeName()
+            );
+        };
+    }
 }

@@ -33,6 +33,8 @@ terminal String string, integer, decimal;
 terminal lparen, rparen, lbrace, rbrace;
 terminal plus, minus, times, slash, UMENOS;
 terminal scol, assign;
+terminal gt;
+terminal eq, lt;   // Operadores de comparación
 terminal String id;
 terminal imprimir, kwTrue, kwFalse, kwIf;
 
@@ -41,7 +43,7 @@ nonterminal Statments INSTRUCCIONES;
 nonterminal ASTNode INSTRUCCION;
 nonterminal ASTNode EXPRESION;
 
-precedence left plus, minus;
+precedence left plus, minus, gt;
 precedence left times, slash;
 precedence right UMENOS;
 
@@ -73,4 +75,5 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | id:n                          {: RESULT = new VarRef(n, nleft, nright); :}
             | integer:e                     {: RESULT = new Integers(new Integer(e), eleft, eright); :}
             | decimal:e                     {: RESULT = new Decimal(new Double(e),   eleft, eright); :}
+            | EXPRESION:a gt EXPRESION:b {: RESULT = new GreaterThan(a,b); :}
 ;

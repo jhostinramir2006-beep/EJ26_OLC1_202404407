@@ -19,4 +19,7 @@ public interface Visitor<T> {
     T visit(Assign.Context ctx);
     T visit(IfNode.Context ctx);
     T visit(Statments.Context ctx);
+    T visit(GreaterThan.Context ctx);
+    T visit(LessThan.Context ctx);
+    T visit(Equal.Context ctx);
 }
