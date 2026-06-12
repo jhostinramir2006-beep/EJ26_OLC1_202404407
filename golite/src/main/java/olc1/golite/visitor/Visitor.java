@@ -25,4 +25,7 @@ public interface Visitor<T> {
     T visit(NotEquals.Context ctx);
     T visit(GreaterEqual.Context ctx);
     T visit(LessEqual.Context ctx);
+    T visit(And.Context ctx);
+    T visit(Or.Context ctx);
+    T visit(Not.Context ctx);
 }

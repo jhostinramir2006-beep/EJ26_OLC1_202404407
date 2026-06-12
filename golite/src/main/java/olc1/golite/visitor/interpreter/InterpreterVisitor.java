@@ -303,4 +303,54 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             );
         };
     }
+    @Override
+    public ValueWrapper visit(And.Context ctx) {
+        ValueWrapper left = Visit(ctx.left);
+
+        if (!(left instanceof BoolValue l)) {
+            throw new RuntimeException("Operacion invalida: && requiere booleanos");
+        }
+
+        if (!l.value()) {
+            return new BoolValue(false, l.line(), l.column());
+        }
+
+        ValueWrapper right = Visit(ctx.right);
+
+        if (!(right instanceof BoolValue r)) {
+            throw new RuntimeException("Operacion invalida: && requiere booleanos");
+        }
+
+        return new BoolValue(r.value(), r.line(), r.column());
+    }
+    @Override
+    public ValueWrapper visit(Or.Context ctx) {
+        ValueWrapper left = Visit(ctx.left);
+
+        if (!(left instanceof BoolValue l)) {
+            throw new RuntimeException("Operacion invalida: || requiere booleanos");
+        }
+
+        if (l.value()) {
+            return new BoolValue(true, l.line(), l.column());
+        }
+
+        ValueWrapper right = Visit(ctx.right);
+
+        if (!(right instanceof BoolValue r)) {
+            throw new RuntimeException("Operacion invalida: || requiere booleanos");
+        }
+
+        return new BoolValue(r.value(), r.line(), r.column());
+    }
+    @Override
+    public ValueWrapper visit(Not.Context ctx) {
+        ValueWrapper expression = Visit(ctx.expression);
+
+        if (!(expression instanceof BoolValue e)) {
+            throw new RuntimeException("Operacion invalida: ! requiere un booleano");
+        }
+
+        return new BoolValue(!e.value(), e.line(), e.column());
+    }
 }

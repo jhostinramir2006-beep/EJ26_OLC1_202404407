@@ -39,6 +39,7 @@ terminal eq;
 terminal neq;
 terminal ge;
 terminal le;
+terminal and, or, not;
 terminal String id;
 terminal imprimir, kwTrue, kwFalse, kwIf;
 
@@ -47,14 +48,13 @@ nonterminal Statments INSTRUCCIONES;
 nonterminal ASTNode INSTRUCCION;
 nonterminal ASTNode EXPRESION;
 
-precedence left plus, minus, gt;
-precedence left lt;
-precedence left eq;
-precedence left neq;
-precedence left ge;
-precedence left le;
+precedence left or;
+precedence left and;
+precedence left eq, neq;
+precedence left lt, gt, le, ge;
+precedence left plus, minus;
 precedence left times, slash;
-precedence right UMENOS;
+precedence right not, UMENOS;
 
 start with INICIO;
 
@@ -90,4 +90,7 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | EXPRESION:a neq EXPRESION:b {: RESULT = new NotEquals(a,b); :}
             | EXPRESION:a ge EXPRESION:b {: RESULT = new GreaterEqual(a,b); :}
             | EXPRESION:a le EXPRESION:b {: RESULT = new LessEqual(a,b); :}
+            | EXPRESION:a and EXPRESION:b {: RESULT = new And(a,b); :}
+            | EXPRESION:a or  EXPRESION:b {: RESULT = new Or(a,b); :}
+            | not EXPRESION:a             {: RESULT = new Not(a); :}
 ;
