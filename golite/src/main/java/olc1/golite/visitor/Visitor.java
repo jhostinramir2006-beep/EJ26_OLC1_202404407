@@ -22,4 +22,7 @@ public interface Visitor<T> {
     T visit(GreaterThan.Context ctx);
     T visit(LessThan.Context ctx);
     T visit(Equals.Context ctx);
+    T visit(NotEquals.Context ctx);
+    T visit(GreaterEqual.Context ctx);
+    T visit(LessEqual.Context ctx);
 }

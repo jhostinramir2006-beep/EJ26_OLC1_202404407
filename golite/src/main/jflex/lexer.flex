@@ -72,6 +72,9 @@ str_lex = ({normal_char} | {escape_char})*
 ">"     { return new Symbol(sym.gt, yyline, yycolumn, yytext()); }
 "<"     { return new Symbol(sym.lt, yyline, yycolumn, yytext()); }
 "="     { return new Symbol(sym.assign, yyline, yycolumn, yytext()); }
+"!="    { return new Symbol(sym.neq, yyline, yycolumn, yytext()); }
+">="    { return new Symbol(sym.ge, yyline, yycolumn, yytext()); }
+"<="    { return new Symbol(sym.le, yyline, yycolumn, yytext()); }
 // Key Words
 "imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
 "true"      { return new Symbol(sym.kwTrue,    yyline, yycolumn, yytext()); }

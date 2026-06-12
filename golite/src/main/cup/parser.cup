@@ -36,6 +36,9 @@ terminal scol, assign;
 terminal gt;
 terminal lt;
 terminal eq;
+terminal neq;
+terminal ge;
+terminal le;
 terminal String id;
 terminal imprimir, kwTrue, kwFalse, kwIf;
 
@@ -47,6 +50,9 @@ nonterminal ASTNode EXPRESION;
 precedence left plus, minus, gt;
 precedence left lt;
 precedence left eq;
+precedence left neq;
+precedence left ge;
+precedence left le;
 precedence left times, slash;
 precedence right UMENOS;
 
@@ -81,4 +87,7 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | EXPRESION:a gt EXPRESION:b {: RESULT = new GreaterThan(a,b); :}
             | EXPRESION:a lt EXPRESION:b {: RESULT = new LessThan(a,b); :}
             | EXPRESION:a eq EXPRESION:b {: RESULT = new Equals(a,b); :}
+            | EXPRESION:a neq EXPRESION:b {: RESULT = new NotEquals(a,b); :}
+            | EXPRESION:a ge EXPRESION:b {: RESULT = new GreaterEqual(a,b); :}
+            | EXPRESION:a le EXPRESION:b {: RESULT = new LessEqual(a,b); :}
 ;
