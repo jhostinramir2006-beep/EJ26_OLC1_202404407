@@ -3,11 +3,11 @@ package olc1.golite.ast.exp;
 import olc1.golite.ast.ASTNode;
 import olc1.golite.visitor.Visitor;
 
-public class Equal implements ASTNode {
+public class Equals implements ASTNode {
     private final ASTNode left;
     private final ASTNode right;
 
-    public Equal(ASTNode left, ASTNode right) {
+    public Equals(ASTNode left, ASTNode right) {
         this.left = left;
         this.right = right;
     }
@@ -16,7 +16,7 @@ public class Equal implements ASTNode {
         public final ASTNode left;
         public final ASTNode right;
 
-        public Context(Equal node) {
+        public Context(Equals node) {
             this.left = node.left;
             this.right = node.right;
         }

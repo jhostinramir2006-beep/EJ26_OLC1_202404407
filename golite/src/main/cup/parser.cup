@@ -34,7 +34,8 @@ terminal lparen, rparen, lbrace, rbrace;
 terminal plus, minus, times, slash, UMENOS;
 terminal scol, assign;
 terminal gt;
-terminal eq, lt;   // Operadores de comparación
+terminal lt;
+terminal eq;
 terminal String id;
 terminal imprimir, kwTrue, kwFalse, kwIf;
 
@@ -44,6 +45,8 @@ nonterminal ASTNode INSTRUCCION;
 nonterminal ASTNode EXPRESION;
 
 precedence left plus, minus, gt;
+precedence left lt;
+precedence left eq;
 precedence left times, slash;
 precedence right UMENOS;
 
@@ -76,4 +79,6 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | integer:e                     {: RESULT = new Integers(new Integer(e), eleft, eright); :}
             | decimal:e                     {: RESULT = new Decimal(new Double(e),   eleft, eright); :}
             | EXPRESION:a gt EXPRESION:b {: RESULT = new GreaterThan(a,b); :}
+            | EXPRESION:a lt EXPRESION:b {: RESULT = new LessThan(a,b); :}
+            | EXPRESION:a eq EXPRESION:b {: RESULT = new Equals(a,b); :}
 ;

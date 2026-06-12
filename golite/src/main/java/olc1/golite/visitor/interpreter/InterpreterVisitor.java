@@ -72,12 +72,29 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     public ValueWrapper visit(Div.Context ctx) {
         ValueWrapper left  = Visit(ctx.left);
         ValueWrapper right = Visit(ctx.right);
+
+        // VALIDACION DE DIVISION POR 0
+        if ((right instanceof IntValue r1 && r1.value() == 0) ||
+            (right instanceof DecimalValue r2 && r2.value() == 0.0)) {
+            throw new RuntimeException("Error: Division por 0");
+        }
+
         return switch (left) {
-            case IntValue     l when right instanceof IntValue     r -> new IntValue(l.value() / r.value(), l.line(), l.column());
-            case IntValue     l when right instanceof DecimalValue r -> new DecimalValue(l.value() / r.value(), l.line(), l.column());
-            case DecimalValue l when right instanceof IntValue     r -> new DecimalValue(l.value() / r.value(), l.line(), l.column());
-            case DecimalValue l when right instanceof DecimalValue r -> new DecimalValue(l.value() / r.value(), l.line(), l.column());
-            default -> throw new RuntimeException("Operacion invalida: " + left.getTypeName() + " / " + right.getTypeName());
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() / r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + left.getTypeName() + " / " + right.getTypeName()
+            );
         };
     }
 
@@ -139,9 +156,13 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     @Override
     public ValueWrapper visit(IfNode.Context ctx) {
         ValueWrapper cond = Visit(ctx.condition);
-        if (cond instanceof BoolValue b && b.value()) {
-            Visit(ctx.body);
-        }
+    if (!(cond instanceof BoolValue)) {
+        throw new RuntimeException("La condicion del if debe ser booleana");
+    }
+
+    if (((BoolValue) cond).value()) {
+        Visit(ctx.body);
+    }
         return defaultVoid;
     }
     @Override
@@ -176,13 +197,13 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             case IntValue l when right instanceof IntValue r ->
                 new BoolValue(l.value() < r.value(), l.line(), l.column());
 
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() < r.value(), l.line(), l.column());
+
             case IntValue l when right instanceof DecimalValue r ->
                 new BoolValue(l.value() < r.value(), l.line(), l.column());
 
             case DecimalValue l when right instanceof IntValue r ->
-                new BoolValue(l.value() < r.value(), l.line(), l.column());
-
-            case DecimalValue l when right instanceof DecimalValue r ->
                 new BoolValue(l.value() < r.value(), l.line(), l.column());
 
             default -> throw new RuntimeException(
@@ -191,7 +212,7 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         };
     }
     @Override
-    public ValueWrapper visit(Equal.Context ctx) {
+    public ValueWrapper visit(Equals.Context ctx) {
         ValueWrapper left  = Visit(ctx.left);
         ValueWrapper right = Visit(ctx.right);
 

@@ -71,7 +71,6 @@ str_lex = ({normal_char} | {escape_char})*
 "=="    { return new Symbol(sym.eq, yyline, yycolumn, yytext()); }
 ">"     { return new Symbol(sym.gt, yyline, yycolumn, yytext()); }
 "<"     { return new Symbol(sym.lt, yyline, yycolumn, yytext()); }
-
 "="     { return new Symbol(sym.assign, yyline, yycolumn, yytext()); }
 // Key Words
 "imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }

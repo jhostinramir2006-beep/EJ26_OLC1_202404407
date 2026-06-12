@@ -21,5 +21,5 @@ public interface Visitor<T> {
     T visit(Statments.Context ctx);
     T visit(GreaterThan.Context ctx);
     T visit(LessThan.Context ctx);
-    T visit(Equal.Context ctx);
+    T visit(Equals.Context ctx);
 }
