@@ -353,4 +353,81 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
         return new BoolValue(!e.value(), e.line(), e.column());
     }
+    @Override
+    public ValueWrapper visit(Mod.Context ctx) {
+        ValueWrapper left = Visit(ctx.left);
+        ValueWrapper right = Visit(ctx.right);
+
+        if (left instanceof IntValue l && right instanceof IntValue r) {
+            if (r.value() == 0) {
+                throw new RuntimeException("Modulo por 0");
+            }
+            return new IntValue(l.value() % r.value(), l.line(), l.column());
+        }
+
+        throw new RuntimeException("Operacion invalida: % solo acepta enteros");
+    }
+    @Override
+    public ValueWrapper visit(PlusAssign.Context ctx) {
+        ValueWrapper current = variables.get(ctx.name);
+        if (current == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
+        }
+
+        ValueWrapper right = Visit(ctx.value);
+
+        ValueWrapper result = switch (current) {
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() + r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case StringValue l when right instanceof StringValue r ->
+                new StringValue(l.value() + r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
+            );
+        };
+
+        variables.put(ctx.name, result);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(MinusAssign.Context ctx) {
+        ValueWrapper current = variables.get(ctx.name);
+        if (current == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
+        }
+
+        ValueWrapper right = Visit(ctx.value);
+
+        ValueWrapper result = switch (current) {
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() - r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + current.getTypeName() + " -= " + right.getTypeName()
+            );
+        };
+
+        variables.put(ctx.name, result);
+        return defaultVoid;
+    }
 }

@@ -41,6 +41,8 @@ terminal ge;
 terminal le;
 terminal and, or, not;
 terminal String id;
+terminal mod;
+terminal plusAssign, minusAssign;
 terminal imprimir, kwTrue, kwFalse, kwIf;
 
 nonterminal Statments INICIO;
@@ -53,7 +55,8 @@ precedence left and;
 precedence left eq, neq;
 precedence left lt, gt, le, ge;
 precedence left plus, minus;
-precedence left times, slash;
+precedence left times, slash, mod;
+precedence left plusAssign, minusAssign;
 precedence right not, UMENOS;
 
 start with INICIO;
@@ -71,6 +74,8 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT =
               | id:n assign EXPRESION:e scol                          {: RESULT = new Assign(n, e, nleft, nright); :}
               | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace {: RESULT = new IfNode(c, b); :}
               | error scol                                                {: RESULT = null; :}
+                | id:n plusAssign EXPRESION:e scol                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+                | id:n minusAssign EXPRESION:e scol                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
 ;
 
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
@@ -93,4 +98,5 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | EXPRESION:a and EXPRESION:b {: RESULT = new And(a,b); :}
             | EXPRESION:a or  EXPRESION:b {: RESULT = new Or(a,b); :}
             | not EXPRESION:a             {: RESULT = new Not(a); :}
+            | EXPRESION:a mod EXPRESION:b {: RESULT = new Mod(a,b); :}
 ;

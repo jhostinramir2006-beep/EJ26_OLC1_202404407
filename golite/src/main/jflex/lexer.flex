@@ -62,9 +62,10 @@ str_lex = ({normal_char} | {escape_char})*
 ")"     { return new Symbol(sym.rparen, yyline, yycolumn, yytext()); }
 "+"     { return new Symbol(sym.plus, yyline, yycolumn, yytext()); }
 "-"     { return new Symbol(sym.minus, yyline, yycolumn, yytext()); }
+"+="     { return new Symbol(sym.plusAssign, yyline, yycolumn, yytext()); }
+"-="    { return new Symbol(sym.minusAssign, yyline, yycolumn, yytext()); }
 "*"     { return new Symbol(sym.times, yyline, yycolumn, yytext()); }
 "/"     { return new Symbol(sym.slash, yyline, yycolumn, yytext()); }
-// "="     { return new Symbol(sym.allocate); }
 ";"     { return new Symbol(sym.scol, yyline, yycolumn, yytext()); }
 "{"     { return new Symbol(sym.lbrace, yyline, yycolumn, yytext()); }
 "}"     { return new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
@@ -74,10 +75,11 @@ str_lex = ({normal_char} | {escape_char})*
 "="     { return new Symbol(sym.assign, yyline, yycolumn, yytext()); }
 ">="    { return new Symbol(sym.ge, yyline, yycolumn, yytext()); }
 "<="    { return new Symbol(sym.le, yyline, yycolumn, yytext()); }
-"&&" { return new Symbol(sym.and, yyline, yycolumn, yytext()); }
-"||" { return new Symbol(sym.or, yyline, yycolumn, yytext()); }
-"!=" { return new Symbol(sym.neq, yyline, yycolumn, yytext()); }
-"!"  { return new Symbol(sym.not, yyline, yycolumn, yytext()); }
+"&&"    { return new Symbol(sym.and, yyline, yycolumn, yytext()); }
+"||"    { return new Symbol(sym.or, yyline, yycolumn, yytext()); }
+"!="    { return new Symbol(sym.neq, yyline, yycolumn, yytext()); }
+"!"     { return new Symbol(sym.not, yyline, yycolumn, yytext()); }
+"%"     { return new Symbol(sym.mod, yyline, yycolumn, yytext()); }
 // Key Words
 "imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
 "true"      { return new Symbol(sym.kwTrue,    yyline, yycolumn, yytext()); }

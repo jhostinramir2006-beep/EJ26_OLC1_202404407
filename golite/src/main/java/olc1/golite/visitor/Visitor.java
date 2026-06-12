@@ -28,4 +28,7 @@ public interface Visitor<T> {
     T visit(And.Context ctx);
     T visit(Or.Context ctx);
     T visit(Not.Context ctx);
+    T visit(Mod.Context ctx);
+    T visit(PlusAssign.Context ctx);
+    T visit(MinusAssign.Context ctx);
 }
