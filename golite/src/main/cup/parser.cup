@@ -43,7 +43,8 @@ terminal and, or, not;
 terminal String id;
 terminal mod;
 terminal plusAssign, minusAssign;
-terminal imprimir, kwTrue, kwFalse, kwIf;
+terminal imprimir, kwTrue, kwFalse, kwIf, kwElse;
+terminal declare;
 
 nonterminal Statments INICIO;
 nonterminal Statments INSTRUCCIONES;
@@ -71,11 +72,23 @@ INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i     {: is.add(i); RESULT = is; 
 ;
 
 INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT = new Imprimir(e); :}
-              | id:n assign EXPRESION:e scol                          {: RESULT = new Assign(n, e, nleft, nright); :}
-              | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace {: RESULT = new IfNode(c, b); :}
-              | error scol                                                {: RESULT = null; :}
+                | id:n assign EXPRESION:e scol                          {: RESULT = new Assign(n, e, nleft, nright); :}
+                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace
+                    {: RESULT = new IfNode(c, b, null); :}
+
+                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace kwElse lbrace INSTRUCCION:e rbrace
+                    {: RESULT = new IfNode(c, b, e); :}
+
+                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace kwElse INSTRUCCION:e
+                    {: RESULT = new IfNode(c, b, e); :}             
+                | error scol                                                {: RESULT = null; :}
                 | id:n plusAssign EXPRESION:e scol                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e scol                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+                | id:n declare EXPRESION:e
+                    {: RESULT = new Assign(n, e, nleft, nright); :}
+
+                | id:n declare EXPRESION:e scol
+                    {: RESULT = new Assign(n, e, nleft, nright); :}
 ;
 
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
@@ -99,4 +112,5 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | EXPRESION:a or  EXPRESION:b {: RESULT = new Or(a,b); :}
             | not EXPRESION:a             {: RESULT = new Not(a); :}
             | EXPRESION:a mod EXPRESION:b {: RESULT = new Mod(a,b); :}
+            | string:s {: RESULT = new StringLiteral(s, sleft, sright); :}
 ;

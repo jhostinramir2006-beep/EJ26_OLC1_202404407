@@ -6,6 +6,7 @@ import java.util.Map;
 import olc1.golite.ast.ASTNode;
 import olc1.golite.ast.exp.*;
 import olc1.golite.ast.stm.*;
+import olc1.golite.reports.GoliteError;
 import olc1.golite.visitor.Visitor;
 import olc1.golite.visitor.interpreter.value.*;
 
@@ -13,8 +14,13 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     public String output = "";
     private final ValueWrapper defaultVoid = new VoidValue(-1, -1);
     private final Map<String, ValueWrapper> variables = new HashMap<>();
+    public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
 
     public ValueWrapper Visit(ASTNode node) {
+        if (node == null) {
+            return defaultVoid;
+        }
+
         return node.accept(this);
     }
 
@@ -34,11 +40,31 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper right = Visit(ctx.right);
 
         return switch (left) {
-            case IntValue     l when right instanceof IntValue     r -> new IntValue(l.value() + r.value(), l.line(), l.column());
-            case IntValue     l when right instanceof DecimalValue r -> new DecimalValue(l.value() + r.value(), l.line(), l.column());
-            case DecimalValue l when right instanceof IntValue     r -> new DecimalValue(l.value() + r.value(), l.line(), l.column());
-            case DecimalValue l when right instanceof DecimalValue r -> new DecimalValue(l.value() + r.value(), l.line(), l.column());
-            default -> throw new RuntimeException("Operacion invalida: " + left.getTypeName() + " + " + right.getTypeName());
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() + r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case StringValue l when right instanceof StringValue r -> {
+                String a = l.value();
+                String b = r.value();
+
+                a = a.replace("\"", "");
+                b = b.replace("\"", "");
+
+                yield new StringValue(a + b, l.line(), l.column());
+            }
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + left.getTypeName() + " + " + right.getTypeName()
+            );
         };
     }
 
@@ -156,13 +182,17 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     @Override
     public ValueWrapper visit(IfNode.Context ctx) {
         ValueWrapper cond = Visit(ctx.condition);
-    if (!(cond instanceof BoolValue)) {
-        throw new RuntimeException("La condicion del if debe ser booleana");
-    }
 
-    if (((BoolValue) cond).value()) {
-        Visit(ctx.body);
-    }
+        if (!(cond instanceof BoolValue b)) {
+            throw new RuntimeException("La condicion del if debe ser booleana");
+        }
+
+        if (b.value()) {
+            Visit(ctx.body);
+        } else if (ctx.elseBody != null) {
+            Visit(ctx.elseBody);
+        }
+
         return defaultVoid;
     }
     @Override

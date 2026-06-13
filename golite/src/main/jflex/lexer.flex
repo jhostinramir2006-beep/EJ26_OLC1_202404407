@@ -53,9 +53,18 @@ str_lex = ({normal_char} | {escape_char})*
 
 %%
 
+// Comentarios
+"//"[^\n\r]* {
+    /* ignorar */
+}
+
+"/*"([^*]|\*+[^*/])*\*+"/" {
+    /* ignorar */
+}
+
 // Numbers
-{digit}+\.{digit}+  { return new Symbol(sym.decimal, yyline, yycolumn, yytext()); }
-{digit}+            { return new Symbol(sym.integer, yyline, yycolumn, yytext()); }
+{digit}+\.{digit}+  { return new Symbol(sym.decimal, yyline + 1, yycolumn + 1, yytext()); }
+{digit}+            { return new Symbol(sym.integer, yyline + 1, yycolumn + 1, yytext()); }
 
 // Symbols
 "("     { return new Symbol(sym.lparen, yyline, yycolumn, yytext()); }
@@ -66,6 +75,7 @@ str_lex = ({normal_char} | {escape_char})*
 "-="    { return new Symbol(sym.minusAssign, yyline, yycolumn, yytext()); }
 "*"     { return new Symbol(sym.times, yyline, yycolumn, yytext()); }
 "/"     { return new Symbol(sym.slash, yyline, yycolumn, yytext()); }
+":="    { return new Symbol(sym.declare, yyline, yycolumn, yytext()); }
 ";"     { return new Symbol(sym.scol, yyline, yycolumn, yytext()); }
 "{"     { return new Symbol(sym.lbrace, yyline, yycolumn, yytext()); }
 "}"     { return new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
@@ -85,6 +95,7 @@ str_lex = ({normal_char} | {escape_char})*
 "true"      { return new Symbol(sym.kwTrue,    yyline, yycolumn, yytext()); }
 "false"     { return new Symbol(sym.kwFalse,   yyline, yycolumn, yytext()); }
 "if"        { return new Symbol(sym.kwIf,      yyline, yycolumn, yytext()); }
+"else"      { return new Symbol(sym.kwElse, yyline, yycolumn, yytext()); }
 
 // ID - String
 {letter}({letter}|{digit})* { return new Symbol(sym.id, yyline, yycolumn, yytext()); }
