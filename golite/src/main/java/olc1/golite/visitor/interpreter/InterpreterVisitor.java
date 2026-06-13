@@ -162,9 +162,12 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
     @Override
     public ValueWrapper visit(StringLiteral.Context ctx) {
-        return new StringValue(ctx.value, ctx.line, ctx.column);
-    }
+        String valor = ctx.value;
 
+        valor = valor.substring(1, valor.length() - 1);
+
+        return new StringValue(valor, ctx.line, ctx.column);
+    }
     @Override
     public ValueWrapper visit(VarRef.Context ctx) {
         ValueWrapper val = variables.get(ctx.name);
@@ -525,5 +528,24 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         }
 
         throw new RuntimeException("Operacion invalida: " + ctx.name + "--");
+    }
+    @Override
+    public ValueWrapper visit(FmtPrintln.Context ctx) {
+        for (int i = 0; i < ctx.arguments.size(); i++) {
+            if (i > 0) output += " ";
+            output += Visit(ctx.arguments.get(i)).toString();
+        }
+        output += "\n";
+        return defaultVoid;
+    }
+
+    @Override
+    public ValueWrapper visit(BreakNode.Context ctx) {
+        throw new RuntimeException("break fuera de ciclo");
+    }
+
+    @Override
+    public ValueWrapper visit(ContinueNode.Context ctx) {
+        throw new RuntimeException("continue fuera de ciclo");
     }
 }

@@ -34,4 +34,7 @@ public interface Visitor<T> {
     T visit(ForNode.Context ctx);
     T visit(Increment.Context ctx);
     T visit(Decrement.Context ctx);
+    T visit(FmtPrintln.Context ctx);
+    T visit(BreakNode.Context ctx);
+    T visit(ContinueNode.Context ctx);
 }

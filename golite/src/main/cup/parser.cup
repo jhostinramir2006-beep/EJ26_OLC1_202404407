@@ -46,7 +46,12 @@ terminal plusAssign, minusAssign;
 terminal imprimir, kwTrue, kwFalse, kwIf, kwElse;
 terminal declare;
 terminal kwFor, inc, dec;
+terminal kwFunc;
+terminal kwVar, kwInt, kwFloat64, kwString, kwBool;
+terminal kwFmt, dot, comma;
+terminal kwBreak, kwContinue;
 
+nonterminal Object FIN;
 nonterminal ASTNode BLOQUE;
 nonterminal ASTNode FOR_INIT;
 nonterminal ASTNode FOR_UPDATE;
@@ -54,6 +59,9 @@ nonterminal Statments INICIO;
 nonterminal Statments INSTRUCCIONES;
 nonterminal ASTNode INSTRUCCION;
 nonterminal ASTNode EXPRESION;
+nonterminal String TIPO;
+nonterminal java.util.List ARGUMENTOS;
+nonterminal java.util.List LISTA_ARGS;
 
 precedence left or;
 precedence left and;
@@ -65,39 +73,57 @@ precedence left plusAssign, minusAssign;
 precedence right not, UMENOS;
 
 start with INICIO;
-
+FIN ::= scol
+      |
+;
 // Gramatica
 
-INICIO ::= INSTRUCCIONES:i   {: RESULT = i; :}
+INICIO ::= INSTRUCCIONES:i
+            {: RESULT = i; :}
+
+         | kwFunc id lparen rparen BLOQUE:b
+            {: RESULT = (Statments)b; :}
 ;
 
-INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i     {: is.add(i); RESULT = is; :}
+INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
+                    {: if(i != null) is.add(i); RESULT = is; :}                
                 | INSTRUCCION:i                      {: RESULT = new Statments(i); :}
 ;
 
-INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT = new Imprimir(e); :}
-                | id:n assign EXPRESION:e scol                          {: RESULT = new Assign(n, e, nleft, nright); :}
-                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace
+INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = new Imprimir(e); :}
+                | id:n assign EXPRESION:e FIN                          {: RESULT = new Assign(n, e, nleft, nright); :}
+                | kwIf lparen EXPRESION:c rparen BLOQUE:b
                     {: RESULT = new IfNode(c, b, null); :}
 
-                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace kwElse lbrace INSTRUCCION:e rbrace
+                | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse BLOQUE:e
                     {: RESULT = new IfNode(c, b, e); :}
 
-                | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace kwElse INSTRUCCION:e
-                    {: RESULT = new IfNode(c, b, e); :}             
+                | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse INSTRUCCION:e
+                    {: RESULT = new IfNode(c, b, e); :}           
                 | kwFor EXPRESION:c BLOQUE:b
                     {: RESULT = new ForNode(null, c, null, b); :}
 
                 | kwFor FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
-                | error scol                                                {: RESULT = null; :}
-                | id:n plusAssign EXPRESION:e scol                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
-                | id:n minusAssign EXPRESION:e scol                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
-                | id:n declare EXPRESION:e
+                | kwVar id:n TIPO:t assign EXPRESION:e FIN
                     {: RESULT = new Assign(n, e, nleft, nright); :}
 
-                | id:n declare EXPRESION:e scol
+                | kwFmt dot id lparen ARGUMENTOS:a rparen FIN
+                    {: RESULT = new FmtPrintln(a); :}
+
+                | kwBreak FIN
+                    {: RESULT = new BreakNode(); :}
+
+                | kwContinue FIN
+                    {: RESULT = new ContinueNode(); :}
+
+
+                | error scol                                                {: RESULT = null; :}
+                | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+                | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+                | id:n declare EXPRESION:e FIN
                     {: RESULT = new Assign(n, e, nleft, nright); :}
+                
 ;
 BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
             {: RESULT = i; :}
@@ -116,6 +142,27 @@ FOR_UPDATE ::= id:n inc
                 {: RESULT = new Decrement(n, nleft, nright); :}
              | id:n assign EXPRESION:e
                 {: RESULT = new Assign(n, e, nleft, nright); :}
+;
+TIPO ::= kwInt
+            {: RESULT = "int"; :}
+       | kwFloat64
+            {: RESULT = "float64"; :}
+       | kwString
+            {: RESULT = "string"; :}
+       | kwBool
+            {: RESULT = "bool"; :}
+;
+
+ARGUMENTOS ::= LISTA_ARGS:l
+                {: RESULT = l; :}
+             |
+                {: RESULT = new ArrayList(); :}
+;
+
+LISTA_ARGS ::= LISTA_ARGS:l comma EXPRESION:e
+                {: l.add(e); RESULT = l; :}
+             | EXPRESION:e
+                {: ArrayList l = new ArrayList(); l.add(e); RESULT = l; :}
 ;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
