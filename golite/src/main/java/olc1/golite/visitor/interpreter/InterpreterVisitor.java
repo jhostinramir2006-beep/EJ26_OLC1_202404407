@@ -13,9 +13,36 @@ import olc1.golite.visitor.interpreter.value.*;
 public class InterpreterVisitor implements Visitor<ValueWrapper> {
     public String output = "";
     private final ValueWrapper defaultVoid = new VoidValue(-1, -1);
-    private final Map<String, ValueWrapper> variables = new HashMap<>();
+    private final Map<String, ValueWrapper> variables = new HashMap<>();    
     public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
+    private final java.util.Deque<Map<String, ValueWrapper>> scopes = new java.util.ArrayDeque<>();
 
+    public InterpreterVisitor() {
+        scopes.push(new HashMap<>());
+    }
+    private Map<String, ValueWrapper> currentScope() {
+    return scopes.peek();
+    }
+
+    private ValueWrapper getVariable(String name) {
+        for (Map<String, ValueWrapper> scope : scopes) {
+            if (scope.containsKey(name)) {
+                return scope.get(name);
+            }
+        }
+        return null;
+    }
+
+    private void setVariable(String name, ValueWrapper value) {
+        for (Map<String, ValueWrapper> scope : scopes) {
+            if (scope.containsKey(name)) {
+                scope.put(name, value);
+                return;
+            }
+        }
+
+        currentScope().put(name, value);
+    }
     public ValueWrapper Visit(ASTNode node) {
         if (node == null) {
             return defaultVoid;
@@ -143,8 +170,14 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
     @Override
     public ValueWrapper visit(Statments.Context ctx) {
-        for (ASTNode statment : ctx.statements) {
-            Visit(statment);
+        scopes.push(new HashMap<>());
+
+        try {
+            for (ASTNode statment : ctx.statements) {
+                Visit(statment);
+            }
+        } finally {
+            scopes.pop();
         }
 
         return defaultVoid;
@@ -170,18 +203,21 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(VarRef.Context ctx) {
-        ValueWrapper val = variables.get(ctx.name);
-        if (val == null) throw new RuntimeException("Variable no definida: " + ctx.name);
+        ValueWrapper val = getVariable(ctx.name);
+
+        if (val == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
+        }
+
         return val;
     }
 
     @Override
     public ValueWrapper visit(Assign.Context ctx) {
         ValueWrapper val = Visit(ctx.value);
-        variables.put(ctx.name, val);
+        setVariable(ctx.name, val);
         return defaultVoid;
     }
-
     @Override
     public ValueWrapper visit(IfNode.Context ctx) {
         ValueWrapper cond = Visit(ctx.condition);
@@ -401,75 +437,84 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         throw new RuntimeException("Operacion invalida: % solo acepta enteros");
     }
     @Override
-    public ValueWrapper visit(PlusAssign.Context ctx) {
-        ValueWrapper current = variables.get(ctx.name);
-        if (current == null) {
-            throw new RuntimeException("Variable no definida: " + ctx.name);
-        }
+public ValueWrapper visit(PlusAssign.Context ctx) {
+    ValueWrapper current = getVariable(ctx.name);
 
-        ValueWrapper right = Visit(ctx.value);
-
-        ValueWrapper result = switch (current) {
-            case IntValue l when right instanceof IntValue r ->
-                new IntValue(l.value() + r.value(), l.line(), l.column());
-
-            case IntValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-            case DecimalValue l when right instanceof IntValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-            case DecimalValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-            case StringValue l when right instanceof StringValue r ->
-                new StringValue(l.value() + r.value(), l.line(), l.column());
-
-            default -> throw new RuntimeException(
-                "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
-            );
-        };
-
-        variables.put(ctx.name, result);
-        return defaultVoid;
+    if (current == null) {
+        throw new RuntimeException("Variable no definida: " + ctx.name);
     }
-    @Override
-    public ValueWrapper visit(MinusAssign.Context ctx) {
-        ValueWrapper current = variables.get(ctx.name);
-        if (current == null) {
-            throw new RuntimeException("Variable no definida: " + ctx.name);
-        }
 
-        ValueWrapper right = Visit(ctx.value);
+    ValueWrapper right = Visit(ctx.value);
 
-        ValueWrapper result = switch (current) {
-            case IntValue l when right instanceof IntValue r ->
-                new IntValue(l.value() - r.value(), l.line(), l.column());
+    ValueWrapper result = switch (current) {
+        case IntValue l when right instanceof IntValue r ->
+            new IntValue(l.value() + r.value(), l.line(), l.column());
 
-            case IntValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+        case IntValue l when right instanceof DecimalValue r ->
+            new DecimalValue(l.value() + r.value(), l.line(), l.column());
 
-            case DecimalValue l when right instanceof IntValue r ->
-                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+        case DecimalValue l when right instanceof IntValue r ->
+            new DecimalValue(l.value() + r.value(), l.line(), l.column());
 
-            case DecimalValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+        case DecimalValue l when right instanceof DecimalValue r ->
+            new DecimalValue(l.value() + r.value(), l.line(), l.column());
 
-            default -> throw new RuntimeException(
-                "Operacion invalida: " + current.getTypeName() + " -= " + right.getTypeName()
-            );
-        };
+        case StringValue l when right instanceof StringValue r ->
+            new StringValue(l.value() + r.value(), l.line(), l.column());
 
-        variables.put(ctx.name, result);
-        return defaultVoid;
+        default -> throw new RuntimeException(
+            "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
+        );
+    };
+
+    setVariable(ctx.name, result);
+    return defaultVoid;
+}
+@Override
+public ValueWrapper visit(MinusAssign.Context ctx) {
+    ValueWrapper current = getVariable(ctx.name);
+
+    if (current == null) {
+        throw new RuntimeException("Variable no definida: " + ctx.name);
     }
+
+    ValueWrapper right = Visit(ctx.value);
+
+    ValueWrapper result = switch (current) {
+        case IntValue l when right instanceof IntValue r ->
+            new IntValue(l.value() - r.value(), l.line(), l.column());
+
+        case IntValue l when right instanceof DecimalValue r ->
+            new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+        case DecimalValue l when right instanceof IntValue r ->
+            new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+        case DecimalValue l when right instanceof DecimalValue r ->
+            new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+        default -> throw new RuntimeException(
+            "Operacion invalida: " + current.getTypeName() + " -= " + right.getTypeName()
+        );
+    };
+
+    setVariable(ctx.name, result);
+    return defaultVoid;
+}
     @Override
     public ValueWrapper visit(ForNode.Context ctx) {
         if (ctx.init != null) {
             Visit(ctx.init);
         }
 
+        int guard = 0;
+
         while (true) {
+            guard++;
+            if (guard > 100000) {
+                throw new RuntimeException("Posible ciclo infinito en for");
+            }
+
             ValueWrapper cond = Visit(ctx.condition);
 
             if (!(cond instanceof BoolValue b)) {
@@ -480,7 +525,16 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
                 break;
             }
 
-            Visit(ctx.body);
+            try {
+                Visit(ctx.body);
+            } catch (ContinueException e) {
+                if (ctx.update != null) {
+                    Visit(ctx.update);
+                }
+                continue;
+            } catch (BreakException e) {
+                break;
+            }
 
             if (ctx.update != null) {
                 Visit(ctx.update);
@@ -491,19 +545,19 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(Increment.Context ctx) {
-        ValueWrapper val = variables.get(ctx.name);
+        ValueWrapper val = getVariable(ctx.name);
 
         if (val == null) {
             throw new RuntimeException("Variable no definida: " + ctx.name);
         }
 
         if (val instanceof IntValue v) {
-            variables.put(ctx.name, new IntValue(v.value() + 1, v.line(), v.column()));
+            setVariable(ctx.name, new IntValue(v.value() + 1, v.line(), v.column()));
             return defaultVoid;
         }
 
         if (val instanceof DecimalValue v) {
-            variables.put(ctx.name, new DecimalValue(v.value() + 1, v.line(), v.column()));
+            setVariable(ctx.name, new DecimalValue(v.value() + 1, v.line(), v.column()));
             return defaultVoid;
         }
 
@@ -511,19 +565,19 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(Decrement.Context ctx) {
-        ValueWrapper val = variables.get(ctx.name);
+        ValueWrapper val = getVariable(ctx.name);
 
         if (val == null) {
             throw new RuntimeException("Variable no definida: " + ctx.name);
         }
 
         if (val instanceof IntValue v) {
-            variables.put(ctx.name, new IntValue(v.value() - 1, v.line(), v.column()));
+            setVariable(ctx.name, new IntValue(v.value() - 1, v.line(), v.column()));
             return defaultVoid;
         }
 
         if (val instanceof DecimalValue v) {
-            variables.put(ctx.name, new DecimalValue(v.value() - 1, v.line(), v.column()));
+            setVariable(ctx.name, new DecimalValue(v.value() - 1, v.line(), v.column()));
             return defaultVoid;
         }
 
@@ -541,11 +595,17 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
     @Override
     public ValueWrapper visit(BreakNode.Context ctx) {
-        throw new RuntimeException("break fuera de ciclo");
+        throw new BreakException();
     }
 
     @Override
     public ValueWrapper visit(ContinueNode.Context ctx) {
-        throw new RuntimeException("continue fuera de ciclo");
+        throw new ContinueException();
+    }
+    @Override
+    public ValueWrapper visit(VarDeclInfer.Context ctx) {
+        ValueWrapper val = Visit(ctx.value);
+        currentScope().put(ctx.name, val);
+        return defaultVoid;
     }
 }

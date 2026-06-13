@@ -1,0 +1,157 @@
+========================================================================
+GRAMÁTICA DEL LENGUAJE GOLITE (NOTACIÓN BNF)
+========================================================================
+Estudiante: Jhostin Javier Ramírez Enríquez
+Carnet: 202404407
+Curso: Organización de Lenguajes y Compiladores 1
+========================================================================
+
+<Program>            ::= <FunctionList>
+
+<FunctionList>       ::= <FunctionDef> <FunctionList>
+                       | <FunctionDef>
+
+<FunctionDef>        ::= "func" <Identificador> "(" <ParamList> ")" <OptReturnType> <Block>
+                       | "func" <Identificador> "(" ")" <OptReturnType> <Block>
+
+<ParamList>          ::= <Param> "," <ParamList>
+                       | <Param>
+
+<Param>              ::= <Identificador> <Type>
+
+<OptReturnType>      ::= <Type>
+                       | ε
+
+<Type>               ::= "int"
+                       | "float64"
+                       | "string"
+                       | "bool"
+                       | "rune"
+                       | "[]" <Type>
+                       | <Identificador>
+
+<Block>              ::= "{" <StmtList> "}"
+                       | "{" "}"
+
+<StmtList>           ::= <Statement> <StmtList>
+                       | <Statement>
+
+<Statement>          ::= <VarDeclaration>
+                       | <Assignment>
+                       | <IfStatement>
+                       | <SwitchStatement>
+                       | <ForStatement>
+                       | <TransferStmt>
+                       | <FunctionCall>
+                       | <StructDeclaration>
+                       | <Block>
+
+<VarDeclaration>     ::= "var" <Identificador> <Type> "=" <Expression>
+                       | "var" <Identificador> <Type>
+                       | <Identificador> ":=" <Expression>
+
+<Assignment>         ::= <AccessExpr> "=" <Expression>
+                       | <AccessExpr> "+=" <Expression>
+                       | <AccessExpr> "-=" <Expression>
+                       | <Identificador> "++"
+                       | <Identificador> "--"
+
+<IfStatement>        ::= "if" <Expression> <Block> <ElseIfList> <OptElse>
+                       | "if" <Expression> <Block> <OptElse>
+
+<ElseIfList>         ::= "else" "if" <Expression> <Block> <ElseIfList>
+                       | "else" "if" <Expression> <Block>
+
+<OptElse>            ::= "else" <Block>
+                       | ε
+
+<SwitchStatement>    ::= "switch" <Expression> "{" <CaseList> <OptDefault> "}"
+                       | "switch" <Expression> "{" <CaseList> "}"
+
+<CaseList>           ::= "case" <Expression> ":" <StmtList> <CaseList>
+                       | "case" <Expression> ":" <StmtList>
+
+<OptDefault>         ::= "default" ":" <StmtList>
+
+<ForStatement>       ::= "for" <Expression> <Block>
+                       | "for" <VarDeclaration> ";" <Expression> ";" <Assignment> <Block>
+                       | "for" <Identificador> "," <Identificador> ":=" "range" <Expression> <Block>
+
+<TransferStmt>       ::= "break"
+                       | "continue"
+                       | "return" <Expression>
+                       | "return"
+
+<FunctionCall>       ::= "fmt.Println" "(" <ExprList> ")"
+                       | "slices.Index" "(" <Expression> "," <Expression> ")"
+                       | "strings.Join" "(" <Expression> "," <Expression> ")"
+                       | "len" "(" <Expression> ")"
+                       | "append" "(" <Expression> "," <Expression> ")"
+                       | "strconv.Atoi" "(" <Expression> ")"
+                       | "strconv.ParseFloat" "(" <Expression> ")"
+                       | "reflect.TypeOf" "(" <Expression> ")" ".string"
+                       | <Identificador> "(" <ExprList> ")"
+                       | <Identificador> "(" ")"
+
+<ExprList>           ::= <Expression> "," <ExprList>
+                       | <Expression>
+
+<StructDeclaration>  ::= "type" <Identificador> "struct" "{" <StructFieldList> "}"
+
+<StructFieldList>    ::= <Identificador> <Type> <StructFieldList>
+                       | <Identificador> <Type>
+
+<Expression>         ::= <LogicalOrExpr>
+
+<LogicalOrExpr>      ::= <LogicalOrExpr> "||" <LogicalAndExpr>
+                       | <LogicalAndExpr>
+
+<LogicalAndExpr>     ::= <LogicalAndExpr> "&&" <EqualityExpr>
+                       | <EqualityExpr>
+
+<EqualityExpr>       ::= <EqualityExpr> "==" <RelationalExpr>
+                       | <EqualityExpr> "!=" <RelationalExpr>
+                       | <RelationalExpr>
+
+<RelationalExpr>     ::= <RelationalExpr> ">" <AdditiveExpr>
+                       | <RelationalExpr> ">=" <AdditiveExpr>
+                       | <RelationalExpr> "<" <AdditiveExpr>
+                       | <RelationalExpr> "<=" <AdditiveExpr>
+                       | <AdditiveExpr>
+
+<AdditiveExpr>       ::= <AdditiveExpr> "+" <MultiplicativeExpr>
+                       | <AdditiveExpr> "-" <MultiplicativeExpr>
+                       | <MultiplicativeExpr>
+
+<MultiplicativeExpr> ::= <MultiplicativeExpr> "*" <UnaryExpr>
+                       | <MultiplicativeExpr> "/" <UnaryExpr>
+                       | <MultiplicativeExpr> "%" <UnaryExpr>
+                       | <UnaryExpr>
+
+<UnaryExpr>          ::= "-" <UnaryExpr>
+                       | "!" <UnaryExpr>
+                       | <AccessExpr>
+
+<AccessExpr>         ::= <AccessExpr> "[" <Expression> "]"
+                       | <AccessExpr> "." <Identificador>
+                       | <PrimaryExpr>
+
+<PrimaryExpr>        ::= <Identificador>
+                       | <Literal>
+                       | "(" <Expression> ")"
+                       | "[]" <Type> "{" <ExprList> "}"
+                       | "[]" <Type> "{" "}"
+
+<Literal>            ::= <LiteralEntero>
+                       | <LiteralFlotante>
+                       | <LiteralCadena>
+                       | <LiteralBooleano>
+                       | <LiteralRune>
+                       | "nil"
+
+<Identificador>      ::= [a-zA-Z_][a-zA-Z0-9_]*
+<LiteralEntero>      ::= [0-9]+
+<LiteralFlotante>    ::= [0-9]+\.[0-9]+
+<LiteralCadena>      ::= \"[^\"]*\"
+<LiteralBooleano>    ::= "true" | "false"
+<LiteralRune>        ::= '[^']'

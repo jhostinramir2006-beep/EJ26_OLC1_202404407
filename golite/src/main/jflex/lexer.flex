@@ -17,7 +17,8 @@ import olc1.golite.reports.GoliteError;
 %public // Paquete del lexer
 %line // conteo de lienas
 %column // conteo de columnas
-%8bit  // recibir caracteres en formato UTF-8
+%unicode
+//%8bit   recibir caracteres en formato UTF-8
 // %debug // Habilitar modo debug para ver el proceso de tokenización
 %ignorecase // ignorar mayusculas y minusculas
 //%unicode

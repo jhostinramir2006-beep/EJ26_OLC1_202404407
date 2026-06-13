@@ -44,6 +44,7 @@ terminal String id;
 terminal mod;
 terminal plusAssign, minusAssign;
 terminal imprimir, kwTrue, kwFalse, kwIf, kwElse;
+terminal IFX;
 terminal declare;
 terminal kwFor, inc, dec;
 terminal kwFunc;
@@ -71,6 +72,8 @@ precedence left plus, minus;
 precedence left times, slash, mod;
 precedence left plusAssign, minusAssign;
 precedence right not, UMENOS;
+precedence nonassoc IFX;
+precedence nonassoc kwElse;
 
 start with INICIO;
 FIN ::= scol
@@ -92,18 +95,21 @@ INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
 
 INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = new Imprimir(e); :}
                 | id:n assign EXPRESION:e FIN                          {: RESULT = new Assign(n, e, nleft, nright); :}
-                | kwIf lparen EXPRESION:c rparen BLOQUE:b
+                | kwIf EXPRESION:c BLOQUE:b
                     {: RESULT = new IfNode(c, b, null); :}
+                    %prec IFX
 
-                | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse BLOQUE:e
+                | kwIf EXPRESION:c BLOQUE:b kwElse INSTRUCCION:e
                     {: RESULT = new IfNode(c, b, e); :}
-
-                | kwIf lparen EXPRESION:c rparen BLOQUE:b kwElse INSTRUCCION:e
-                    {: RESULT = new IfNode(c, b, e); :}           
+                | BLOQUE:b
+                    {: RESULT = b; :}
                 | kwFor EXPRESION:c BLOQUE:b
                     {: RESULT = new ForNode(null, c, null, b); :}
 
                 | kwFor FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u BLOQUE:b
+                    {: RESULT = new ForNode(i, c, u, b); :}
+
+                | kwFor lparen FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u rparen BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
                 | kwVar id:n TIPO:t assign EXPRESION:e FIN
                     {: RESULT = new Assign(n, e, nleft, nright); :}
@@ -122,7 +128,7 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                 | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
                 | id:n declare EXPRESION:e FIN
-                    {: RESULT = new Assign(n, e, nleft, nright); :}
+                    {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
                 
 ;
 BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
@@ -132,16 +138,24 @@ BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
 ;
 FOR_INIT ::= id:n assign EXPRESION:e
                 {: RESULT = new Assign(n, e, nleft, nright); :}
-           | id:n declare EXPRESION:e
-                {: RESULT = new Assign(n, e, nleft, nright); :}
+            | id:n declare EXPRESION:e
+                {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
 ;
 
 FOR_UPDATE ::= id:n inc
                 {: RESULT = new Increment(n, nleft, nright); :}
+
              | id:n dec
                 {: RESULT = new Decrement(n, nleft, nright); :}
+
              | id:n assign EXPRESION:e
                 {: RESULT = new Assign(n, e, nleft, nright); :}
+
+             | id:n plusAssign EXPRESION:e
+                {: RESULT = new PlusAssign(n, e, nleft, nright); :}
+
+             | id:n minusAssign EXPRESION:e
+                {: RESULT = new MinusAssign(n, e, nleft, nright); :}
 ;
 TIPO ::= kwInt
             {: RESULT = "int"; :}
