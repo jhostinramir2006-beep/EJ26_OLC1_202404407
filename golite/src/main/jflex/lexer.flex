@@ -46,7 +46,7 @@ import olc1.golite.reports.GoliteError;
 
 // Definición de patrones léxicos
 digit = [0-9]
-letter = [a-zA-Z]
+letter = [a-zA-Z_]
 whitespace = [\ \r\t\f\n]+
 escape_char = \\ [\"\\nrt]
 normal_char = [^\"\\\n\r]
@@ -134,8 +134,11 @@ str_lex = ({normal_char} | {escape_char})*
 "fmt"       { return new Symbol(sym.kwFmt, yyline, yycolumn, yytext()); }
 
 "imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
+"rune"      { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
 // ID - String
-{letter}({letter}|{digit})* { return new Symbol(sym.id, yyline, yycolumn, yytext()); }
+{letter}({letter}|{digit})* {
+    return new Symbol(sym.id, yyline, yycolumn, yytext());
+}
 \"{str_lex}\"               { return new Symbol(sym.string, yyline, yycolumn, yytext()); }
 
 // Ignorar

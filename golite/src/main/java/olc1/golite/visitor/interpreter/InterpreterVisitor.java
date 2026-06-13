@@ -608,4 +608,23 @@ public ValueWrapper visit(MinusAssign.Context ctx) {
         currentScope().put(ctx.name, val);
         return defaultVoid;
     }
+@Override
+public ValueWrapper visit(VarDecl.Context ctx) {
+    ValueWrapper val;
+
+    if (ctx.value != null) {
+        val = Visit(ctx.value);
+    } else {
+        val = switch (ctx.type) {
+            case "int" -> new IntValue(0, ctx.line, ctx.column);
+            case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
+            case "string" -> new StringValue("", ctx.line, ctx.column);
+            case "bool" -> new BoolValue(false, ctx.line, ctx.column);
+            default -> new VoidValue(ctx.line, ctx.column);
+        };
+    }
+
+    currentScope().put(ctx.name, val);
+    return defaultVoid;
+}
 }

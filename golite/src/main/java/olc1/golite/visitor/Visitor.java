@@ -38,4 +38,5 @@ public interface Visitor<T> {
     T visit(BreakNode.Context ctx);
     T visit(ContinueNode.Context ctx);
     T visit(VarDeclInfer.Context ctx);
+    T visit(VarDecl.Context ctx);
 }

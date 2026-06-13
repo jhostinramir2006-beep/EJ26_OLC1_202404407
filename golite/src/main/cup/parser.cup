@@ -51,6 +51,7 @@ terminal kwFunc;
 terminal kwVar, kwInt, kwFloat64, kwString, kwBool;
 terminal kwFmt, dot, comma;
 terminal kwBreak, kwContinue;
+terminal kwRune;
 
 nonterminal Object FIN;
 nonterminal ASTNode BLOQUE;
@@ -112,7 +113,7 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                 | kwFor lparen FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u rparen BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
                 | kwVar id:n TIPO:t assign EXPRESION:e FIN
-                    {: RESULT = new Assign(n, e, nleft, nright); :}
+                    {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
 
                 | kwFmt dot id lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new FmtPrintln(a); :}
@@ -129,6 +130,8 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
                 | id:n declare EXPRESION:e FIN
                     {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
+                | kwVar id:n TIPO:t FIN
+                    {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
                 
 ;
 BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
@@ -159,12 +162,14 @@ FOR_UPDATE ::= id:n inc
 ;
 TIPO ::= kwInt
             {: RESULT = "int"; :}
-       | kwFloat64
+        | kwFloat64
             {: RESULT = "float64"; :}
-       | kwString
+        | kwString
             {: RESULT = "string"; :}
-       | kwBool
+        | kwBool
             {: RESULT = "bool"; :}
+        | kwRune
+            {: RESULT = "rune"; :}
 ;
 
 ARGUMENTOS ::= LISTA_ARGS:l
