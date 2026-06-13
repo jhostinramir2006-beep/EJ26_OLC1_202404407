@@ -31,4 +31,7 @@ public interface Visitor<T> {
     T visit(Mod.Context ctx);
     T visit(PlusAssign.Context ctx);
     T visit(MinusAssign.Context ctx);
+    T visit(ForNode.Context ctx);
+    T visit(Increment.Context ctx);
+    T visit(Decrement.Context ctx);
 }

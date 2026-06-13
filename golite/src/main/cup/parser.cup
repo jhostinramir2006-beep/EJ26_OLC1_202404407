@@ -45,7 +45,11 @@ terminal mod;
 terminal plusAssign, minusAssign;
 terminal imprimir, kwTrue, kwFalse, kwIf, kwElse;
 terminal declare;
+terminal kwFor, inc, dec;
 
+nonterminal ASTNode BLOQUE;
+nonterminal ASTNode FOR_INIT;
+nonterminal ASTNode FOR_UPDATE;
 nonterminal Statments INICIO;
 nonterminal Statments INSTRUCCIONES;
 nonterminal ASTNode INSTRUCCION;
@@ -81,6 +85,11 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT =
 
                 | kwIf lparen EXPRESION:c rparen lbrace INSTRUCCION:b rbrace kwElse INSTRUCCION:e
                     {: RESULT = new IfNode(c, b, e); :}             
+                | kwFor EXPRESION:c BLOQUE:b
+                    {: RESULT = new ForNode(null, c, null, b); :}
+
+                | kwFor FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u BLOQUE:b
+                    {: RESULT = new ForNode(i, c, u, b); :}
                 | error scol                                                {: RESULT = null; :}
                 | id:n plusAssign EXPRESION:e scol                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e scol                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
@@ -90,7 +99,24 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen scol              {: RESULT =
                 | id:n declare EXPRESION:e scol
                     {: RESULT = new Assign(n, e, nleft, nright); :}
 ;
+BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
+            {: RESULT = i; :}
+         | lbrace rbrace
+            {: RESULT = new Statments(null); :}
+;
+FOR_INIT ::= id:n assign EXPRESION:e
+                {: RESULT = new Assign(n, e, nleft, nright); :}
+           | id:n declare EXPRESION:e
+                {: RESULT = new Assign(n, e, nleft, nright); :}
+;
 
+FOR_UPDATE ::= id:n inc
+                {: RESULT = new Increment(n, nleft, nright); :}
+             | id:n dec
+                {: RESULT = new Decrement(n, nleft, nright); :}
+             | id:n assign EXPRESION:e
+                {: RESULT = new Assign(n, e, nleft, nright); :}
+;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
             | EXPRESION:a minus EXPRESION:b {: RESULT = new Sub(a, b); :}

@@ -69,9 +69,12 @@ str_lex = ({normal_char} | {escape_char})*
 // Symbols
 "("     { return new Symbol(sym.lparen, yyline, yycolumn, yytext()); }
 ")"     { return new Symbol(sym.rparen, yyline, yycolumn, yytext()); }
+"++"    { return new Symbol(sym.inc, yyline, yycolumn, yytext()); }
+"--"    { return new Symbol(sym.dec, yyline, yycolumn, yytext()); }
+"for"   { return new Symbol(sym.kwFor, yyline, yycolumn, yytext()); }
 "+"     { return new Symbol(sym.plus, yyline, yycolumn, yytext()); }
 "-"     { return new Symbol(sym.minus, yyline, yycolumn, yytext()); }
-"+="     { return new Symbol(sym.plusAssign, yyline, yycolumn, yytext()); }
+"+="    { return new Symbol(sym.plusAssign, yyline, yycolumn, yytext()); }
 "-="    { return new Symbol(sym.minusAssign, yyline, yycolumn, yytext()); }
 "*"     { return new Symbol(sym.times, yyline, yycolumn, yytext()); }
 "/"     { return new Symbol(sym.slash, yyline, yycolumn, yytext()); }

@@ -460,4 +460,70 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         variables.put(ctx.name, result);
         return defaultVoid;
     }
+    @Override
+    public ValueWrapper visit(ForNode.Context ctx) {
+        if (ctx.init != null) {
+            Visit(ctx.init);
+        }
+
+        while (true) {
+            ValueWrapper cond = Visit(ctx.condition);
+
+            if (!(cond instanceof BoolValue b)) {
+                throw new RuntimeException("La condicion del for debe ser booleana");
+            }
+
+            if (!b.value()) {
+                break;
+            }
+
+            Visit(ctx.body);
+
+            if (ctx.update != null) {
+                Visit(ctx.update);
+            }
+        }
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(Increment.Context ctx) {
+        ValueWrapper val = variables.get(ctx.name);
+
+        if (val == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
+        }
+
+        if (val instanceof IntValue v) {
+            variables.put(ctx.name, new IntValue(v.value() + 1, v.line(), v.column()));
+            return defaultVoid;
+        }
+
+        if (val instanceof DecimalValue v) {
+            variables.put(ctx.name, new DecimalValue(v.value() + 1, v.line(), v.column()));
+            return defaultVoid;
+        }
+
+        throw new RuntimeException("Operacion invalida: " + ctx.name + "++");
+    }
+    @Override
+    public ValueWrapper visit(Decrement.Context ctx) {
+        ValueWrapper val = variables.get(ctx.name);
+
+        if (val == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
+        }
+
+        if (val instanceof IntValue v) {
+            variables.put(ctx.name, new IntValue(v.value() - 1, v.line(), v.column()));
+            return defaultVoid;
+        }
+
+        if (val instanceof DecimalValue v) {
+            variables.put(ctx.name, new DecimalValue(v.value() - 1, v.line(), v.column()));
+            return defaultVoid;
+        }
+
+        throw new RuntimeException("Operacion invalida: " + ctx.name + "--");
+    }
 }
