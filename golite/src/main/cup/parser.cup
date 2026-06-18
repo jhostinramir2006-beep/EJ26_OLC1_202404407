@@ -52,6 +52,8 @@ terminal kwVar, kwInt, kwFloat64, kwString, kwBool;
 terminal kwFmt, dot, comma;
 terminal kwBreak, kwContinue;
 terminal kwRune;
+terminal lbracket, rbracket;
+terminal kwRange;
 
 nonterminal Object FIN;
 nonterminal ASTNode BLOQUE;
@@ -128,10 +130,17 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                 | error scol                                                {: RESULT = null; :}
                 | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
+                | id:n inc FIN
+                    {: RESULT = new Increment(n, nleft, nright); :}
+
+                | id:n dec FIN
+                    {: RESULT = new Decrement(n, nleft, nright); :}
                 | id:n declare EXPRESION:e FIN
                     {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
                 | kwVar id:n TIPO:t FIN
                     {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
+                | kwFor id:i comma id:v declare kwRange id:s BLOQUE:b
+                    {: RESULT = new ForRangeNode(i, v, s, b, ileft, iright); :}
                 
 ;
 BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
@@ -205,4 +214,6 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | not EXPRESION:a             {: RESULT = new Not(a); :}
             | EXPRESION:a mod EXPRESION:b {: RESULT = new Mod(a,b); :}
             | string:s {: RESULT = new StringLiteral(s, sleft, sright); :}
+            | lbracket rbracket TIPO:t lbrace ARGUMENTOS:a rbrace
+                    {: RESULT = new SliceLiteral(t, a); :}
 ;

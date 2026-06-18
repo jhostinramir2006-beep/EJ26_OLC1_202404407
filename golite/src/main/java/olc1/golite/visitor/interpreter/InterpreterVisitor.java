@@ -168,20 +168,15 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         return defaultVoid;
     }
 
-    @Override
-    public ValueWrapper visit(Statments.Context ctx) {
-        scopes.push(new HashMap<>());
-
-        try {
-            for (ASTNode statment : ctx.statements) {
-                Visit(statment);
-            }
-        } finally {
-            scopes.pop();
+@Override
+public ValueWrapper visit(Statments.Context ctx) {
+    for (ASTNode statment : ctx.statements) {
+        if (statment != null) {
+            Visit(statment);
         }
-
-        return defaultVoid;
     }
+    return defaultVoid;
+}
 
     @Override
     public ValueWrapper visit(Paren.Context ctx) {
@@ -501,48 +496,41 @@ public ValueWrapper visit(MinusAssign.Context ctx) {
     setVariable(ctx.name, result);
     return defaultVoid;
 }
-    @Override
-    public ValueWrapper visit(ForNode.Context ctx) {
-        if (ctx.init != null) {
-            Visit(ctx.init);
+@Override
+public ValueWrapper visit(ForNode.Context ctx) {
+    if (ctx.init != null) {
+        Visit(ctx.init);
+    }
+
+    while (true) {
+        ValueWrapper cond = Visit(ctx.condition);
+
+        if (!(cond instanceof BoolValue b)) {
+            throw new RuntimeException("La condicion del for debe ser booleana");
         }
 
-        int guard = 0;
+        if (!b.value()) {
+            break;
+        }
 
-        while (true) {
-            guard++;
-            if (guard > 100000) {
-                throw new RuntimeException("Posible ciclo infinito en for");
-            }
-
-            ValueWrapper cond = Visit(ctx.condition);
-
-            if (!(cond instanceof BoolValue b)) {
-                throw new RuntimeException("La condicion del for debe ser booleana");
-            }
-
-            if (!b.value()) {
-                break;
-            }
-
-            try {
-                Visit(ctx.body);
-            } catch (ContinueException e) {
-                if (ctx.update != null) {
-                    Visit(ctx.update);
-                }
-                continue;
-            } catch (BreakException e) {
-                break;
-            }
-
+        try {
+            Visit(ctx.body);
+        } catch (ContinueException e) {
             if (ctx.update != null) {
                 Visit(ctx.update);
             }
+            continue;
+        } catch (BreakException e) {
+            break;
         }
 
-        return defaultVoid;
+        if (ctx.update != null) {
+            Visit(ctx.update);
+        }
     }
+
+    return defaultVoid;
+}
     @Override
     public ValueWrapper visit(Increment.Context ctx) {
         ValueWrapper val = getVariable(ctx.name);
@@ -608,23 +596,62 @@ public ValueWrapper visit(MinusAssign.Context ctx) {
         currentScope().put(ctx.name, val);
         return defaultVoid;
     }
-@Override
-public ValueWrapper visit(VarDecl.Context ctx) {
-    ValueWrapper val;
+    @Override
+    public ValueWrapper visit(VarDecl.Context ctx) {
+        ValueWrapper val;
 
-    if (ctx.value != null) {
-        val = Visit(ctx.value);
-    } else {
-        val = switch (ctx.type) {
-            case "int" -> new IntValue(0, ctx.line, ctx.column);
-            case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
-            case "string" -> new StringValue("", ctx.line, ctx.column);
-            case "bool" -> new BoolValue(false, ctx.line, ctx.column);
-            default -> new VoidValue(ctx.line, ctx.column);
-        };
+        if (ctx.value != null) {
+            val = Visit(ctx.value);
+        } else {
+            val = switch (ctx.type) {
+                case "int" -> new IntValue(0, ctx.line, ctx.column);
+                case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
+                case "string" -> new StringValue("", ctx.line, ctx.column);
+                case "bool" -> new BoolValue(false, ctx.line, ctx.column);
+                default -> new VoidValue(ctx.line, ctx.column);
+            };
+        }
+
+        currentScope().put(ctx.name, val);
+        return defaultVoid;
     }
+    @Override
+    public ValueWrapper visit(SliceLiteral.Context ctx) {
+        java.util.List<ValueWrapper> vals = new java.util.ArrayList<>();
 
-    currentScope().put(ctx.name, val);
-    return defaultVoid;
-}
+        for (ASTNode node : ctx.values) {
+            vals.add(Visit(node));
+        }
+
+        return new SliceValue(ctx.type, vals, -1, -1);
+    }
+    @Override
+    public ValueWrapper visit(ForRangeNode.Context ctx) {
+        ValueWrapper val = getVariable(ctx.sliceName);
+
+        if (!(val instanceof SliceValue slice)) {
+            throw new RuntimeException("range solo puede usarse sobre slices");
+        }
+
+        for (int i = 0; i < slice.values().size(); i++) {
+            scopes.push(new java.util.HashMap<>());
+
+            currentScope().put(ctx.indexName, new IntValue(i, ctx.line, ctx.column));
+            currentScope().put(ctx.valueName, slice.values().get(i));
+
+            try {
+                Visit(ctx.body);
+            } catch (ContinueException e) {
+                scopes.pop();
+                continue;
+            } catch (BreakException e) {
+                scopes.pop();
+                break;
+            }
+
+            scopes.pop();
+        }
+
+        return defaultVoid;
+    }
 }

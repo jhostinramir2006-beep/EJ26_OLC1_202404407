@@ -39,4 +39,6 @@ public interface Visitor<T> {
     T visit(ContinueNode.Context ctx);
     T visit(VarDeclInfer.Context ctx);
     T visit(VarDecl.Context ctx);
+    T visit(SliceLiteral.Context ctx);
+    T visit(ForRangeNode.Context ctx);
 }

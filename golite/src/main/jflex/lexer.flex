@@ -110,6 +110,8 @@ str_lex = ({normal_char} | {escape_char})*
 
 "{"     { return new Symbol(sym.lbrace, yyline, yycolumn, yytext()); }
 "}"     { return new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
+"["     { return new Symbol(sym.lbracket, yyline, yycolumn, yytext()); }
+"]"     { return new Symbol(sym.rbracket, yyline, yycolumn, yytext()); }
 // Key Words
 
 "for"       { return new Symbol(sym.kwFor, yyline, yycolumn, yytext()); }
@@ -135,6 +137,7 @@ str_lex = ({normal_char} | {escape_char})*
 
 "imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
 "rune"      { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
+"range"     { return new Symbol(sym.kwRange, yyline, yycolumn, yytext()); }
 // ID - String
 {letter}({letter}|{digit})* {
     return new Symbol(sym.id, yyline, yycolumn, yytext());
