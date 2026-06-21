@@ -58,12 +58,22 @@ terminal String rune_literal;
 terminal kwReflect, kwTypeOf;
 terminal kwStrconv, kwAtoi, kwParseFloat;
 terminal kwNil;
+terminal kwSwitch, kwCase, kwDefault, colon;
+terminal kwReturn;
 
+nonterminal java.util.List FUNCIONES;
+nonterminal ASTNode FUNCION;
+nonterminal java.util.List PARAMETROS;
+nonterminal java.util.List LISTA_PARAMETROS;
+nonterminal ASTNode PARAMETRO;
+nonterminal java.util.List CASES;
+nonterminal ASTNode CASE_BLOCK;
+nonterminal ASTNode DEFAULT_BLOCK;
 nonterminal Object FIN;
 nonterminal ASTNode BLOQUE;
 nonterminal ASTNode FOR_INIT;
 nonterminal ASTNode FOR_UPDATE;
-nonterminal Statments INICIO;
+nonterminal ASTNode INICIO;
 nonterminal Statments INSTRUCCIONES;
 nonterminal ASTNode INSTRUCCION;
 nonterminal ASTNode EXPRESION;
@@ -88,11 +98,11 @@ FIN ::= scol
 ;
 // Gramatica
 
-INICIO ::= INSTRUCCIONES:i
-            {: RESULT = i; :}
+INICIO ::= FUNCIONES:f
+            {: RESULT = new ProgramNode(f); :}
 
-         | kwFunc id lparen rparen BLOQUE:b
-            {: RESULT = (Statments)b; :}
+         | INSTRUCCIONES:i
+            {: RESULT = i; :}
 ;
 
 INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
@@ -145,12 +155,62 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
                 | kwFor id:i comma id:v declare kwRange id:s BLOQUE:b
                     {: RESULT = new ForRangeNode(i, v, s, b, ileft, iright); :}
+                | kwSwitch EXPRESION:e lbrace CASES:c DEFAULT_BLOCK:d rbrace
+                    {: RESULT = new SwitchNode(e, c, d); :}
+
+                | kwSwitch EXPRESION:e lbrace CASES:c rbrace
+                    {: RESULT = new SwitchNode(e, c, null); :}
+                | kwReturn EXPRESION:e FIN
+                    {: RESULT = new ReturnNode(e); :}
                 
 ;
-BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
+FUNCIONES ::= FUNCIONES:fs FUNCION:f
+                {: fs.add(f); RESULT = fs; :}
+            | FUNCION:f
+                {: ArrayList fs = new ArrayList(); fs.add(f); RESULT = fs; :}
+;
+
+FUNCION ::= kwFunc id:n lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
+                {: RESULT = new FunctionDecl(n, p, t, b); :}
+
+          | kwFunc id:n lparen PARAMETROS:p rparen BLOQUE:b
+                {: RESULT = new FunctionDecl(n, p, "void", b); :}
+;
+
+PARAMETROS ::= LISTA_PARAMETROS:p
+                {: RESULT = p; :}
+             |
+                {: RESULT = new ArrayList(); :}
+;
+
+LISTA_PARAMETROS ::= LISTA_PARAMETROS:l comma PARAMETRO:p
+                        {: l.add(p); RESULT = l; :}
+                   | PARAMETRO:p
+                        {: ArrayList l = new ArrayList(); l.add(p); RESULT = l; :}
+;
+
+PARAMETRO ::= id:n TIPO:t
+                {: RESULT = new ParameterNode(n, t); :}
+;
+
+CASES ::= CASES:l CASE_BLOCK:c
+            {: l.add(c); RESULT = l; :}
+        | CASE_BLOCK:c
+            {: ArrayList l = new ArrayList(); l.add(c); RESULT = l; :}
+;
+
+CASE_BLOCK ::= kwCase EXPRESION:e colon INSTRUCCIONES:i
+            {: RESULT = new CaseNode(e, i); :}
+;
+
+DEFAULT_BLOCK ::= kwDefault colon INSTRUCCIONES:i
             {: RESULT = i; :}
+;
+BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
+            {: RESULT = new BlockNode(i); :}
+
          | lbrace rbrace
-            {: RESULT = new Statments(null); :}
+            {: RESULT = new BlockNode(new Statments(null)); :}
 ;
 FOR_INIT ::= id:n assign EXPRESION:e
                 {: RESULT = new Assign(n, e, nleft, nright); :}
@@ -233,4 +293,6 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
 
             | kwNil
                 {: RESULT = new NilLiteral(); :}
+            | id:n lparen ARGUMENTOS:a rparen
+                {: RESULT = new FunctionCall(n, a); :}
 ;

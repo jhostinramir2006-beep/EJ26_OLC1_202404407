@@ -46,4 +46,12 @@ public interface Visitor<T> {
     T visit(AtoiNode.Context ctx);
     T visit(ParseFloatNode.Context ctx);
     T visit(NilLiteral.Context ctx);
+    T visit(BlockNode.Context ctx);
+    T visit(SwitchNode.Context ctx);
+    T visit(CaseNode.Context ctx);
+    T visit(ProgramNode.Context ctx);
+    T visit(FunctionDecl.Context ctx);
+    T visit(ParameterNode.Context ctx);
+    T visit(ReturnNode.Context ctx);
+    T visit(FunctionCall.Context ctx);
 }

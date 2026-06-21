@@ -16,6 +16,7 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     private final Map<String, ValueWrapper> variables = new HashMap<>();    
     public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
     private final java.util.Deque<Map<String, ValueWrapper>> scopes = new java.util.ArrayDeque<>();
+    private final Map<String, FunctionDecl.Context> functions = new HashMap<>();
 
     public InterpreterVisitor() {
         scopes.push(new HashMap<>());
@@ -723,5 +724,110 @@ public ValueWrapper visit(ForNode.Context ctx) {
     @Override
     public ValueWrapper visit(NilLiteral.Context ctx) {
         return new NilValue(-1, -1);
+    }
+    @Override
+    public ValueWrapper visit(BlockNode.Context ctx) {
+        scopes.push(new HashMap<>());
+
+        try {
+            Visit(ctx.body);
+        } finally {
+            scopes.pop();
+        }
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(CaseNode.Context ctx) {
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(SwitchNode.Context ctx) {
+        ValueWrapper switchValue = Visit(ctx.expression);
+
+        for (ASTNode node : ctx.cases) {
+            if (node instanceof CaseNode c) {
+                ValueWrapper caseValue = Visit(c.getValue());
+
+                boolean match = switchValue.getTypeName().equals(caseValue.getTypeName())
+                        && switchValue.toString().equals(caseValue.toString());
+
+                if (match) {
+                    Visit(c.getBody());
+                    return defaultVoid;
+                }
+            }
+        }
+
+        if (ctx.defaultBody != null) {
+            Visit(ctx.defaultBody);
+        }
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(ProgramNode.Context ctx) {
+        for (ASTNode fn : ctx.functions) {
+            if (fn instanceof FunctionDecl f) {
+                FunctionDecl.Context fctx = new FunctionDecl.Context(f);
+                functions.put(fctx.name, fctx);
+            }
+        }
+
+        FunctionDecl.Context main = functions.get("main");
+
+        if (main == null) {
+            throw new RuntimeException("No existe funcion main");
+        }
+
+        Visit(main.body);
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(FunctionDecl.Context ctx) {
+        functions.put(ctx.name, ctx);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(ParameterNode.Context ctx) {
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(ReturnNode.Context ctx) {
+        ValueWrapper value = Visit(ctx.value);
+        throw new ReturnException(value);
+    }
+    @Override
+    public ValueWrapper visit(FunctionCall.Context ctx) {
+        FunctionDecl.Context fn = functions.get(ctx.name);
+
+        if (fn == null) {
+            throw new RuntimeException("Funcion no definida: " + ctx.name);
+        }
+
+        if (ctx.args.size() != fn.params.size()) {
+            throw new RuntimeException("Cantidad incorrecta de argumentos en funcion: " + ctx.name);
+        }
+
+        scopes.push(new HashMap<>());
+
+        try {
+            for (int i = 0; i < fn.params.size(); i++) {
+                ParameterNode param = (ParameterNode) fn.params.get(i);
+                ValueWrapper argValue = Visit(ctx.args.get(i));
+
+                currentScope().put(param.name, argValue);
+            }
+
+            Visit(fn.body);
+
+        } catch (ReturnException r) {
+            scopes.pop();
+            return r.value;
+        }
+
+        scopes.pop();
+        return defaultVoid;
     }
 }
