@@ -54,6 +54,10 @@ terminal kwBreak, kwContinue;
 terminal kwRune;
 terminal lbracket, rbracket;
 terminal kwRange;
+terminal String rune_literal;
+terminal kwReflect, kwTypeOf;
+terminal kwStrconv, kwAtoi, kwParseFloat;
+terminal kwNil;
 
 nonterminal Object FIN;
 nonterminal ASTNode BLOQUE;
@@ -216,4 +220,17 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | string:s {: RESULT = new StringLiteral(s, sleft, sright); :}
             | lbracket rbracket TIPO:t lbrace ARGUMENTOS:a rbrace
                     {: RESULT = new SliceLiteral(t, a); :}
+            | rune_literal:r
+                    {: RESULT = new RuneLiteral(r, rleft, rright); :}
+            | kwReflect dot kwTypeOf lparen EXPRESION:e rparen
+                {: RESULT = new TypeOfNode(e); :}
+
+            | kwStrconv dot kwAtoi lparen EXPRESION:e rparen
+                {: RESULT = new AtoiNode(e); :}
+
+            | kwStrconv dot kwParseFloat lparen EXPRESION:e rparen
+                {: RESULT = new ParseFloatNode(e); :}
+
+            | kwNil
+                {: RESULT = new NilLiteral(); :}
 ;

@@ -41,4 +41,9 @@ public interface Visitor<T> {
     T visit(VarDecl.Context ctx);
     T visit(SliceLiteral.Context ctx);
     T visit(ForRangeNode.Context ctx);
+    T visit(RuneLiteral.Context ctx);
+    T visit(TypeOfNode.Context ctx);
+    T visit(AtoiNode.Context ctx);
+    T visit(ParseFloatNode.Context ctx);
+    T visit(NilLiteral.Context ctx);
 }

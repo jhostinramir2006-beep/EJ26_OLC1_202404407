@@ -287,11 +287,20 @@ public ValueWrapper visit(Statments.Context ctx) {
             case DecimalValue l when right instanceof DecimalValue r ->
                 new BoolValue(l.value() == r.value(), l.line(), l.column());
 
+            case IntValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
+
             case BoolValue l when right instanceof BoolValue r ->
                 new BoolValue(l.value() == r.value(), l.line(), l.column());
 
             case StringValue l when right instanceof StringValue r ->
                 new BoolValue(l.value().equals(r.value()), l.line(), l.column());
+
+            case RuneValue l when right instanceof RuneValue r ->
+                new BoolValue(l.value() == r.value(), l.line(), l.column());
 
             default -> throw new RuntimeException(
                 "Operacion invalida: " + left.getTypeName() + " == " + right.getTypeName()
@@ -310,11 +319,20 @@ public ValueWrapper visit(Statments.Context ctx) {
             case DecimalValue l when right instanceof DecimalValue r ->
                 new BoolValue(l.value() != r.value(), l.line(), l.column());
 
+            case IntValue l when right instanceof DecimalValue r ->
+                new BoolValue(l.value() != r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() != r.value(), l.line(), l.column());
+
             case BoolValue l when right instanceof BoolValue r ->
                 new BoolValue(l.value() != r.value(), l.line(), l.column());
 
             case StringValue l when right instanceof StringValue r ->
                 new BoolValue(!l.value().equals(r.value()), l.line(), l.column());
+
+            case RuneValue l when right instanceof RuneValue r ->
+                new BoolValue(l.value() != r.value(), l.line(), l.column());
 
             default -> throw new RuntimeException(
                 "Operacion invalida: " + left.getTypeName() + " != " + right.getTypeName()
@@ -339,6 +357,9 @@ public ValueWrapper visit(Statments.Context ctx) {
             case DecimalValue l when right instanceof IntValue r ->
                 new BoolValue(l.value() >= r.value(), l.line(), l.column());
 
+            case RuneValue l when right instanceof RuneValue r ->
+                new BoolValue(l.value() >= r.value(), l.line(), l.column());
+
             default -> throw new RuntimeException(
                 "Operacion invalida: " + left.getTypeName() + " >= " + right.getTypeName()
             );
@@ -360,6 +381,9 @@ public ValueWrapper visit(Statments.Context ctx) {
                 new BoolValue(l.value() <= r.value(), l.line(), l.column());
 
             case DecimalValue l when right instanceof IntValue r ->
+                new BoolValue(l.value() <= r.value(), l.line(), l.column());
+            
+            case RuneValue l when right instanceof RuneValue r ->
                 new BoolValue(l.value() <= r.value(), l.line(), l.column());
 
             default -> throw new RuntimeException(
@@ -653,5 +677,51 @@ public ValueWrapper visit(ForNode.Context ctx) {
         }
 
         return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(RuneLiteral.Context ctx) {
+        String txt = ctx.value; // ejemplo: 'A'
+        char c = txt.charAt(1);
+        return new RuneValue(c, ctx.line, ctx.column);
+    }
+    @Override
+    public ValueWrapper visit(TypeOfNode.Context ctx) {
+        ValueWrapper val = Visit(ctx.expression);
+        return new StringValue(val.getTypeName(), val.line(), val.column());
+    }
+
+    @Override
+    public ValueWrapper visit(AtoiNode.Context ctx) {
+        ValueWrapper val = Visit(ctx.expression);
+
+        if (!(val instanceof StringValue s)) {
+            throw new RuntimeException("strconv.Atoi requiere string");
+        }
+
+        try {
+            return new IntValue(Integer.parseInt(s.value()), s.line(), s.column());
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("No se puede convertir a int: " + s.value());
+        }
+    }
+
+    @Override
+    public ValueWrapper visit(ParseFloatNode.Context ctx) {
+        ValueWrapper val = Visit(ctx.expression);
+
+        if (!(val instanceof StringValue s)) {
+            throw new RuntimeException("strconv.ParseFloat requiere string");
+        }
+
+        try {
+            return new DecimalValue(Double.parseDouble(s.value()), s.line(), s.column());
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("No se puede convertir a float64: " + s.value());
+        }
+    }
+
+    @Override
+    public ValueWrapper visit(NilLiteral.Context ctx) {
+        return new NilValue(-1, -1);
     }
 }
