@@ -33,7 +33,16 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         }
         return null;
     }
-
+    private boolean equalsValues(ValueWrapper a, ValueWrapper b) {
+        if (a instanceof IntValue x && b instanceof IntValue y) return x.value() == y.value();
+        if (a instanceof DecimalValue x && b instanceof DecimalValue y) return x.value() == y.value();
+        if (a instanceof IntValue x && b instanceof DecimalValue y) return x.value() == y.value();
+        if (a instanceof DecimalValue x && b instanceof IntValue y) return x.value() == y.value();
+        if (a instanceof StringValue x && b instanceof StringValue y) return x.value().equals(y.value());
+        if (a instanceof BoolValue x && b instanceof BoolValue y) return x.value() == y.value();
+        if (a instanceof RuneValue x && b instanceof RuneValue y) return x.value() == y.value();
+        return false;
+    }
     private void setVariable(String name, ValueWrapper value) {
         for (Map<String, ValueWrapper> scope : scopes) {
             if (scope.containsKey(name)) {
@@ -633,6 +642,11 @@ public ValueWrapper visit(ForNode.Context ctx) {
                 case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
                 case "string" -> new StringValue("", ctx.line, ctx.column);
                 case "bool" -> new BoolValue(false, ctx.line, ctx.column);
+                case "[]int" -> new SliceValue("int", new java.util.ArrayList<>(), ctx.line, ctx.column);
+                case "[]float64" -> new SliceValue("float64", new java.util.ArrayList<>(), ctx.line, ctx.column);
+                case "[]string" -> new SliceValue("string", new java.util.ArrayList<>(), ctx.line, ctx.column);
+                case "[]bool" -> new SliceValue("bool", new java.util.ArrayList<>(), ctx.line, ctx.column);
+                case "[]rune" -> new SliceValue("rune", new java.util.ArrayList<>(), ctx.line, ctx.column);
                 default -> new VoidValue(ctx.line, ctx.column);
             };
         }
@@ -829,5 +843,123 @@ public ValueWrapper visit(ForNode.Context ctx) {
 
         scopes.pop();
         return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(SliceAccess.Context ctx) {
+        ValueWrapper sliceVal = getVariable(ctx.name);
+
+        if (!(sliceVal instanceof SliceValue slice)) {
+            throw new RuntimeException(ctx.name + " no es un slice");
+        }
+
+        ValueWrapper indexVal = Visit(ctx.index);
+
+        if (!(indexVal instanceof IntValue idx)) {
+            throw new RuntimeException("El indice debe ser int");
+        }
+
+        int i = idx.value();
+
+        if (i < 0 || i >= slice.values().size()) {
+            throw new RuntimeException("Indice fuera de rango: " + i);
+        }
+
+        return slice.values().get(i);
+    }
+    @Override
+    public ValueWrapper visit(SliceAssign.Context ctx) {
+        ValueWrapper sliceVal = getVariable(ctx.name);
+
+        if (!(sliceVal instanceof SliceValue slice)) {
+            throw new RuntimeException(ctx.name + " no es un slice");
+        }
+
+        ValueWrapper indexVal = Visit(ctx.index);
+
+        if (!(indexVal instanceof IntValue idx)) {
+            throw new RuntimeException("El indice debe ser int");
+        }
+
+        int i = idx.value();
+
+        if (i < 0 || i >= slice.values().size()) {
+            throw new RuntimeException("Indice fuera de rango: " + i);
+        }
+
+        ValueWrapper newValue = Visit(ctx.value);
+
+        slice.values().set(i, newValue);
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(LenNode.Context ctx) {
+        ValueWrapper val = Visit(ctx.expression);
+
+        if (!(val instanceof SliceValue slice)) {
+            throw new RuntimeException("len solo acepta slices");
+        }
+
+        return new IntValue(slice.values().size(), val.line(), val.column());
+    }
+    @Override
+    public ValueWrapper visit(AppendNode.Context ctx) {
+        ValueWrapper sliceVal = Visit(ctx.slice);
+        ValueWrapper value = Visit(ctx.value);
+
+        if (!(sliceVal instanceof SliceValue slice)) {
+            throw new RuntimeException("append solo acepta slices");
+        }
+
+        java.util.List<ValueWrapper> nuevaLista = new java.util.ArrayList<>(slice.values());
+        nuevaLista.add(value);
+
+        return new SliceValue(slice.elementType(), nuevaLista, slice.line(), slice.column());
+    }
+    @Override
+    public ValueWrapper visit(SlicesIndexNode.Context ctx) {
+        ValueWrapper sliceVal = Visit(ctx.slice);
+        ValueWrapper searchVal = Visit(ctx.value);
+
+        if (!(sliceVal instanceof SliceValue slice)) {
+            throw new RuntimeException("slices.Index requiere un slice");
+        }
+
+        for (int i = 0; i < slice.values().size(); i++) {
+            if (equalsValues(slice.values().get(i), searchVal)) {
+                return new IntValue(i, slice.line(), slice.column());
+            }
+        }
+
+        return new IntValue(-1, slice.line(), slice.column());
+    }
+    @Override
+    public ValueWrapper visit(StringsJoinNode.Context ctx) {
+        ValueWrapper sliceVal = Visit(ctx.slice);
+        ValueWrapper sepVal = Visit(ctx.separator);
+
+        if (!(sliceVal instanceof SliceValue slice)) {
+            throw new RuntimeException("strings.Join requiere un slice");
+        }
+
+        if (!slice.elementType().equals("string")) {
+            throw new RuntimeException("strings.Join solo acepta []string");
+        }
+
+        if (!(sepVal instanceof StringValue sep)) {
+            throw new RuntimeException("El separador de strings.Join debe ser string");
+        }
+
+        java.util.List<String> partes = new java.util.ArrayList<>();
+
+        for (ValueWrapper v : slice.values()) {
+            if (!(v instanceof StringValue s)) {
+                throw new RuntimeException("strings.Join solo acepta strings");
+            }
+
+            partes.add(s.value());
+        }
+
+        return new StringValue(String.join(sep.value(), partes), slice.line(), slice.column());
     }
 }

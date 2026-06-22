@@ -150,7 +150,15 @@ str_lex = ({normal_char} | {escape_char})*
 "case"      { return new Symbol(sym.kwCase, yyline, yycolumn, yytext()); }
 "default"   { return new Symbol(sym.kwDefault, yyline, yycolumn, yytext()); }
 ":"         { return new Symbol(sym.colon, yyline, yycolumn, yytext()); }
-"return" { return new Symbol(sym.kwReturn, yyline, yycolumn, yytext()); }
+"return"    { return new Symbol(sym.kwReturn, yyline, yycolumn, yytext()); }
+"slices"    { return new Symbol(sym.kwSlices, yyline, yycolumn, yytext()); }
+"Index"     { return new Symbol(sym.kwIndex, yyline, yycolumn, yytext()); }
+
+"strings"   { return new Symbol(sym.kwStrings, yyline, yycolumn, yytext()); }
+"Join"      { return new Symbol(sym.kwJoin, yyline, yycolumn, yytext()); }
+
+"len"       { return new Symbol(sym.kwLen, yyline, yycolumn, yytext()); }
+"append"    { return new Symbol(sym.kwAppend, yyline, yycolumn, yytext()); }
 \'([^\'\\\n\r]|\\[nrt\'\\])\'
 {
     return new Symbol(sym.rune_literal, yyline, yycolumn, yytext());

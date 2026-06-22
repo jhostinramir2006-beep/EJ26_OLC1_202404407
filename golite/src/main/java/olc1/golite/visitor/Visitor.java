@@ -54,4 +54,10 @@ public interface Visitor<T> {
     T visit(ParameterNode.Context ctx);
     T visit(ReturnNode.Context ctx);
     T visit(FunctionCall.Context ctx);
+    T visit(SliceAccess.Context ctx);
+    T visit(SliceAssign.Context ctx);
+    T visit(LenNode.Context ctx);
+    T visit(AppendNode.Context ctx);
+    T visit(SlicesIndexNode.Context ctx);
+    T visit(StringsJoinNode.Context ctx);
 }

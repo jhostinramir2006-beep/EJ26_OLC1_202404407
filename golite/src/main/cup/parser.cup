@@ -60,6 +60,9 @@ terminal kwStrconv, kwAtoi, kwParseFloat;
 terminal kwNil;
 terminal kwSwitch, kwCase, kwDefault, colon;
 terminal kwReturn;
+terminal kwSlices, kwIndex;
+terminal kwStrings, kwJoin;
+terminal kwLen, kwAppend;
 
 nonterminal java.util.List FUNCIONES;
 nonterminal ASTNode FUNCION;
@@ -80,6 +83,7 @@ nonterminal ASTNode EXPRESION;
 nonterminal String TIPO;
 nonterminal java.util.List ARGUMENTOS;
 nonterminal java.util.List LISTA_ARGS;
+nonterminal String TIPO_SLICE;
 
 precedence left or;
 precedence left and;
@@ -162,7 +166,13 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new SwitchNode(e, c, null); :}
                 | kwReturn EXPRESION:e FIN
                     {: RESULT = new ReturnNode(e); :}
-                
+                | kwVar id:n TIPO_SLICE:t FIN
+                    {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
+
+                | kwVar id:n TIPO_SLICE:t assign EXPRESION:e FIN
+                    {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+                | id:n lbracket EXPRESION:i rbracket assign EXPRESION:e FIN
+                    {: RESULT = new SliceAssign(n, i, e); :}
 ;
 FUNCIONES ::= FUNCIONES:fs FUNCION:f
                 {: fs.add(f); RESULT = fs; :}
@@ -256,6 +266,9 @@ LISTA_ARGS ::= LISTA_ARGS:l comma EXPRESION:e
              | EXPRESION:e
                 {: ArrayList l = new ArrayList(); l.add(e); RESULT = l; :}
 ;
+TIPO_SLICE ::= lbracket rbracket TIPO:t
+                {: RESULT = "[]" + t; :}
+;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
             | EXPRESION:a minus EXPRESION:b {: RESULT = new Sub(a, b); :}
@@ -295,4 +308,17 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
                 {: RESULT = new NilLiteral(); :}
             | id:n lparen ARGUMENTOS:a rparen
                 {: RESULT = new FunctionCall(n, a); :}
+            | id:n lbracket EXPRESION:i rbracket
+                {: RESULT = new SliceAccess(n, i); :}
+            | kwLen lparen EXPRESION:e rparen
+                {: RESULT = new LenNode(e); :}
+
+            | kwAppend lparen EXPRESION:s comma EXPRESION:v rparen
+                {: RESULT = new AppendNode(s, v); :}
+
+            | kwSlices dot kwIndex lparen EXPRESION:s comma EXPRESION:v rparen
+                {: RESULT = new SlicesIndexNode(s, v); :}
+
+            | kwStrings dot kwJoin lparen EXPRESION:s comma EXPRESION:sep rparen
+                {: RESULT = new StringsJoinNode(s, sep); :}
 ;

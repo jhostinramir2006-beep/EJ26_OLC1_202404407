@@ -4,7 +4,7 @@ public record DecimalValue(double value, int line, int column) implements ValueW
     
     @Override
     public String getTypeName() {
-        return "decimal";
+        return "float64";
     }
 
     @Override
