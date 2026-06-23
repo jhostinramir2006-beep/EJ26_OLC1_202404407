@@ -137,6 +137,8 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new ForNode(i, c, u, b); :}
                 | kwVar id:n TIPO:t assign EXPRESION:e FIN
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+                | kwVar id:n assign EXPRESION:e FIN
+                    {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
 
                 | kwFmt dot id lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new FmtPrintln(a); :}
