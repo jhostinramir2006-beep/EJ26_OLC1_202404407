@@ -84,6 +84,9 @@ nonterminal String TIPO;
 nonterminal java.util.List ARGUMENTOS;
 nonterminal java.util.List LISTA_ARGS;
 nonterminal String TIPO_SLICE;
+nonterminal String TIPO_MULTI_SLICE;
+nonterminal java.util.List FILAS_SLICE;
+nonterminal ASTNode FILA_SLICE;
 
 precedence left or;
 precedence left and;
@@ -173,6 +176,8 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
                 | id:n lbracket EXPRESION:i rbracket assign EXPRESION:e FIN
                     {: RESULT = new SliceAssign(n, i, e); :}
+                | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket assign EXPRESION:e FIN
+                    {: RESULT = new MultiSliceAssign(n, i, j, e); :}
 ;
 FUNCIONES ::= FUNCIONES:fs FUNCION:f
                 {: fs.add(f); RESULT = fs; :}
@@ -269,6 +274,22 @@ LISTA_ARGS ::= LISTA_ARGS:l comma EXPRESION:e
 TIPO_SLICE ::= lbracket rbracket TIPO:t
                 {: RESULT = "[]" + t; :}
 ;
+TIPO_MULTI_SLICE ::= lbracket rbracket lbracket rbracket TIPO:t
+                    {: RESULT = "[][]" + t; :}
+;
+FILAS_SLICE ::= FILAS_SLICE:l comma FILA_SLICE:f
+                {: l.add(f); RESULT = l; :}
+              | FILAS_SLICE:l comma
+                {: RESULT = l; :}
+              | FILA_SLICE:f
+                {: ArrayList l = new ArrayList(); l.add(f); RESULT = l; :}
+;
+
+FILA_SLICE ::= lbrace LISTA_ARGS:a rbrace
+                {: RESULT = new SliceLiteral("", a); :}
+             | lbrace rbrace
+                {: RESULT = new SliceLiteral("", new ArrayList()); :}
+;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
             | EXPRESION:a minus EXPRESION:b {: RESULT = new Sub(a, b); :}
@@ -308,6 +329,12 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
                 {: RESULT = new NilLiteral(); :}
             | id:n lparen ARGUMENTOS:a rparen
                 {: RESULT = new FunctionCall(n, a); :}
+            | lbracket rbracket lbracket rbracket TIPO:t lbrace FILAS_SLICE:f rbrace
+                {: RESULT = new MultiSliceLiteral(t, f); :}
+
+            | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket
+                {: RESULT = new MultiSliceAccess(n, i, j); :}
+
             | id:n lbracket EXPRESION:i rbracket
                 {: RESULT = new SliceAccess(n, i); :}
             | kwLen lparen EXPRESION:e rparen
@@ -321,4 +348,5 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
 
             | kwStrings dot kwJoin lparen EXPRESION:s comma EXPRESION:sep rparen
                 {: RESULT = new StringsJoinNode(s, sep); :}
+
 ;

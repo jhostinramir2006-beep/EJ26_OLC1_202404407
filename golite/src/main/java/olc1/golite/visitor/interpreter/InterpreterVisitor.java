@@ -905,16 +905,53 @@ public ValueWrapper visit(ForNode.Context ctx) {
     @Override
     public ValueWrapper visit(AppendNode.Context ctx) {
         ValueWrapper sliceVal = Visit(ctx.slice);
-        ValueWrapper value = Visit(ctx.value);
+        ValueWrapper valueVal = Visit(ctx.value);
 
         if (!(sliceVal instanceof SliceValue slice)) {
             throw new RuntimeException("append solo acepta slices");
         }
 
-        java.util.List<ValueWrapper> nuevaLista = new java.util.ArrayList<>(slice.values());
-        nuevaLista.add(value);
+        String tipoEsperado = slice.elementType();
 
-        return new SliceValue(slice.elementType(), nuevaLista, slice.line(), slice.column());
+        // Caso 1: slice normal: []int, []string, []float64, etc.
+        // Ejemplo: numeros = append(numeros, 4)
+        if (!tipoEsperado.startsWith("[]")) {
+            if (!valueVal.getTypeName().equals(tipoEsperado)) {
+                throw new RuntimeException(
+                    "No se puede agregar " + valueVal.getTypeName() +
+                    " a " + slice.getTypeName()
+                );
+            }
+        }
+
+        // Caso 2: slice multidimensional: [][]int
+        // Ejemplo: mtx1 = append(mtx1, numeros)
+        else {
+            if (!(valueVal instanceof SliceValue agregado)) {
+                throw new RuntimeException(
+                    "append esperaba un " + tipoEsperado
+                );
+            }
+
+            if (!agregado.getTypeName().equals(tipoEsperado)) {
+                throw new RuntimeException(
+                    "No se puede agregar " + agregado.getTypeName() +
+                    " a " + slice.getTypeName()
+                );
+            }
+        }
+
+        java.util.List<ValueWrapper> nuevaLista =
+            new java.util.ArrayList<>(slice.values());
+
+        nuevaLista.add(valueVal);
+
+        return new SliceValue(
+            slice.elementType(),
+            nuevaLista,
+            slice.line(),
+            slice.column()
+        );
     }
     @Override
     public ValueWrapper visit(SlicesIndexNode.Context ctx) {
@@ -961,5 +998,95 @@ public ValueWrapper visit(ForNode.Context ctx) {
         }
 
         return new StringValue(String.join(sep.value(), partes), slice.line(), slice.column());
+    }
+@Override
+public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
+    java.util.List<ValueWrapper> rows = new java.util.ArrayList<>();
+
+    for (ASTNode rowNode : ctx.rows) {
+        ValueWrapper row = Visit(rowNode);
+        rows.add(row);
+    }
+
+    return new SliceValue("[]" + ctx.type, rows, -1, -1);
+}
+    @Override
+    public ValueWrapper visit(MultiSliceAccess.Context ctx) {
+        ValueWrapper matrixVal = getVariable(ctx.name);
+
+        if (!(matrixVal instanceof SliceValue matrix)) {
+            throw new RuntimeException(ctx.name + " no es un slice multidimensional");
+        }
+
+        ValueWrapper rowVal = Visit(ctx.row);
+        ValueWrapper colVal = Visit(ctx.column);
+
+        if (!(rowVal instanceof IntValue r)) {
+            throw new RuntimeException("El indice de fila debe ser int");
+        }
+
+        if (!(colVal instanceof IntValue c)) {
+            throw new RuntimeException("El indice de columna debe ser int");
+        }
+
+        int rowIndex = r.value();
+        int colIndex = c.value();
+
+        if (rowIndex < 0 || rowIndex >= matrix.values().size()) {
+            throw new RuntimeException("Indice de fila fuera de rango: " + rowIndex);
+        }
+
+        ValueWrapper selectedRow = matrix.values().get(rowIndex);
+
+        if (!(selectedRow instanceof SliceValue row)) {
+            throw new RuntimeException("La fila no es un slice");
+        }
+
+        if (colIndex < 0 || colIndex >= row.values().size()) {
+            throw new RuntimeException("Indice de columna fuera de rango: " + colIndex);
+        }
+
+        return row.values().get(colIndex);
+    }
+    @Override
+    public ValueWrapper visit(MultiSliceAssign.Context ctx) {
+        ValueWrapper matrixVal = getVariable(ctx.name);
+
+        if (!(matrixVal instanceof SliceValue matrix)) {
+            throw new RuntimeException(ctx.name + " no es un slice multidimensional");
+        }
+
+        ValueWrapper rowVal = Visit(ctx.row);
+        ValueWrapper colVal = Visit(ctx.column);
+
+        if (!(rowVal instanceof IntValue r)) {
+            throw new RuntimeException("El indice de fila debe ser int");
+        }
+
+        if (!(colVal instanceof IntValue c)) {
+            throw new RuntimeException("El indice de columna debe ser int");
+        }
+
+        int rowIndex = r.value();
+        int colIndex = c.value();
+
+        if (rowIndex < 0 || rowIndex >= matrix.values().size()) {
+            throw new RuntimeException("Indice de fila fuera de rango: " + rowIndex);
+        }
+
+        ValueWrapper selectedRow = matrix.values().get(rowIndex);
+
+        if (!(selectedRow instanceof SliceValue row)) {
+            throw new RuntimeException("La fila no es un slice");
+        }
+
+        if (colIndex < 0 || colIndex >= row.values().size()) {
+            throw new RuntimeException("Indice de columna fuera de rango: " + colIndex);
+        }
+
+        ValueWrapper newValue = Visit(ctx.value);
+        row.values().set(colIndex, newValue);
+
+        return defaultVoid;
     }
 }

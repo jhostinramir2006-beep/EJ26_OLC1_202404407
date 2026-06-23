@@ -60,4 +60,7 @@ public interface Visitor<T> {
     T visit(AppendNode.Context ctx);
     T visit(SlicesIndexNode.Context ctx);
     T visit(StringsJoinNode.Context ctx);
+    T visit(MultiSliceLiteral.Context ctx);
+    T visit(MultiSliceAccess.Context ctx);
+    T visit(MultiSliceAssign.Context ctx);
 }
