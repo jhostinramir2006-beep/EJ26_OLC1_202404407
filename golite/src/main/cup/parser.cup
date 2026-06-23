@@ -63,6 +63,7 @@ terminal kwReturn;
 terminal kwSlices, kwIndex;
 terminal kwStrings, kwJoin;
 terminal kwLen, kwAppend;
+terminal kwStruct;
 
 nonterminal java.util.List FUNCIONES;
 nonterminal ASTNode FUNCION;
@@ -87,6 +88,11 @@ nonterminal String TIPO_SLICE;
 nonterminal String TIPO_MULTI_SLICE;
 nonterminal java.util.List FILAS_SLICE;
 nonterminal ASTNode FILA_SLICE;
+nonterminal java.util.List STRUCT_FIELDS;
+nonterminal StructField STRUCT_FIELD;
+nonterminal java.util.List STRUCT_VALUES;
+nonterminal StructAssignment STRUCT_VALUE;
+nonterminal ASTNode ACCESO;
 
 precedence left or;
 precedence left and;
@@ -107,7 +113,6 @@ FIN ::= scol
 
 INICIO ::= FUNCIONES:f
             {: RESULT = new ProgramNode(f); :}
-
          | INSTRUCCIONES:i
             {: RESULT = i; :}
 ;
@@ -122,40 +127,31 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                 | kwIf EXPRESION:c BLOQUE:b
                     {: RESULT = new IfNode(c, b, null); :}
                     %prec IFX
-
                 | kwIf EXPRESION:c BLOQUE:b kwElse INSTRUCCION:e
                     {: RESULT = new IfNode(c, b, e); :}
                 | BLOQUE:b
                     {: RESULT = b; :}
                 | kwFor EXPRESION:c BLOQUE:b
                     {: RESULT = new ForNode(null, c, null, b); :}
-
                 | kwFor FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
-
                 | kwFor lparen FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u rparen BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
                 | kwVar id:n TIPO:t assign EXPRESION:e FIN
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
                 | kwVar id:n assign EXPRESION:e FIN
                     {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
-
                 | kwFmt dot id lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new FmtPrintln(a); :}
-
                 | kwBreak FIN
                     {: RESULT = new BreakNode(); :}
-
                 | kwContinue FIN
                     {: RESULT = new ContinueNode(); :}
-
-
                 | error scol                                                {: RESULT = null; :}
                 | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
                 | id:n inc FIN
                     {: RESULT = new Increment(n, nleft, nright); :}
-
                 | id:n dec FIN
                     {: RESULT = new Decrement(n, nleft, nright); :}
                 | id:n declare EXPRESION:e FIN
@@ -166,20 +162,26 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new ForRangeNode(i, v, s, b, ileft, iright); :}
                 | kwSwitch EXPRESION:e lbrace CASES:c DEFAULT_BLOCK:d rbrace
                     {: RESULT = new SwitchNode(e, c, d); :}
-
                 | kwSwitch EXPRESION:e lbrace CASES:c rbrace
                     {: RESULT = new SwitchNode(e, c, null); :}
                 | kwReturn EXPRESION:e FIN
                     {: RESULT = new ReturnNode(e); :}
                 | kwVar id:n TIPO_SLICE:t FIN
                     {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
-
                 | kwVar id:n TIPO_SLICE:t assign EXPRESION:e FIN
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
                 | id:n lbracket EXPRESION:i rbracket assign EXPRESION:e FIN
                     {: RESULT = new SliceAssign(n, i, e); :}
                 | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket assign EXPRESION:e FIN
                     {: RESULT = new MultiSliceAssign(n, i, j, e); :}
+                | kwStruct id:n lbrace STRUCT_FIELDS:f rbrace
+                    {: RESULT = new StructDecl(n, f); :}
+                | id:t id:n assign lbrace STRUCT_VALUES:v rbrace FIN
+                    {: RESULT = new StructVarDecl(t, n, v); :}
+                | TIPO:t id:n assign EXPRESION:e FIN
+                    {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
+                | id:n dot id:a assign EXPRESION:e FIN
+                    {: RESULT = new StructAssign(n, a, e); :}
 ;
 FUNCIONES ::= FUNCIONES:fs FUNCION:f
                 {: fs.add(f); RESULT = fs; :}
@@ -189,7 +191,6 @@ FUNCIONES ::= FUNCIONES:fs FUNCION:f
 
 FUNCION ::= kwFunc id:n lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
                 {: RESULT = new FunctionDecl(n, p, t, b); :}
-
           | kwFunc id:n lparen PARAMETROS:p rparen BLOQUE:b
                 {: RESULT = new FunctionDecl(n, p, "void", b); :}
 ;
@@ -225,7 +226,6 @@ DEFAULT_BLOCK ::= kwDefault colon INSTRUCCIONES:i
 ;
 BLOQUE ::= lbrace INSTRUCCIONES:i rbrace
             {: RESULT = new BlockNode(i); :}
-
          | lbrace rbrace
             {: RESULT = new BlockNode(new Statments(null)); :}
 ;
@@ -237,16 +237,12 @@ FOR_INIT ::= id:n assign EXPRESION:e
 
 FOR_UPDATE ::= id:n inc
                 {: RESULT = new Increment(n, nleft, nright); :}
-
              | id:n dec
                 {: RESULT = new Decrement(n, nleft, nright); :}
-
              | id:n assign EXPRESION:e
                 {: RESULT = new Assign(n, e, nleft, nright); :}
-
              | id:n plusAssign EXPRESION:e
                 {: RESULT = new PlusAssign(n, e, nleft, nright); :}
-
              | id:n minusAssign EXPRESION:e
                 {: RESULT = new MinusAssign(n, e, nleft, nright); :}
 ;
@@ -292,6 +288,42 @@ FILA_SLICE ::= lbrace LISTA_ARGS:a rbrace
              | lbrace rbrace
                 {: RESULT = new SliceLiteral("", new ArrayList()); :}
 ;
+STRUCT_FIELDS ::= STRUCT_FIELDS:l STRUCT_FIELD:f
+                {: l.add(f); RESULT = l; :}
+            | STRUCT_FIELD:f
+                {: ArrayList l = new ArrayList(); l.add(f); RESULT = l; :}
+;
+
+STRUCT_FIELD ::= TIPO:t id:n FIN
+                {: RESULT = new StructField(t, n); :}
+            | id:t id:n FIN
+                {: RESULT = new StructField(t, n); :}
+;
+
+STRUCT_VALUES ::= STRUCT_VALUES:l comma STRUCT_VALUE:v
+                {: l.add(v); RESULT = l; :}
+            | STRUCT_VALUE:v
+                {: ArrayList l = new ArrayList(); l.add(v); RESULT = l; :}
+;
+
+STRUCT_VALUE ::= id:n colon EXPRESION:e
+                    {: RESULT = new StructAssignment(n, e); :}
+;
+ACCESO ::= id:n
+            {: RESULT = new VarRef(n, nleft, nright); :}
+
+         | id:n lparen ARGUMENTOS:a rparen
+            {: RESULT = new FunctionCall(n, a); :}
+
+         | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket
+            {: RESULT = new MultiSliceAccess(n, i, j); :}
+
+         | id:n lbracket EXPRESION:i rbracket
+            {: RESULT = new SliceAccess(n, i); :}
+
+         | ACCESO:e dot id:a
+            {: RESULT = new StructAccessExpr(e, a); :}
+;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
             | EXPRESION:a minus EXPRESION:b {: RESULT = new Sub(a, b); :}
@@ -300,7 +332,6 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | lparen EXPRESION:e rparen     {: RESULT = new Paren(e); :}
             | kwTrue:t                      {: RESULT = new BoolLiteral(true,  tleft, tright); :}
             | kwFalse:f                     {: RESULT = new BoolLiteral(false, fleft, fright); :}
-            | id:n                          {: RESULT = new VarRef(n, nleft, nright); :}
             | integer:e                     {: RESULT = new Integers(new Integer(e), eleft, eright); :}
             | decimal:e                     {: RESULT = new Decimal(new Double(e),   eleft, eright); :}
             | EXPRESION:a gt EXPRESION:b {: RESULT = new GreaterThan(a,b); :}
@@ -320,35 +351,24 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
                     {: RESULT = new RuneLiteral(r, rleft, rright); :}
             | kwReflect dot kwTypeOf lparen EXPRESION:e rparen
                 {: RESULT = new TypeOfNode(e); :}
-
             | kwStrconv dot kwAtoi lparen EXPRESION:e rparen
                 {: RESULT = new AtoiNode(e); :}
-
             | kwStrconv dot kwParseFloat lparen EXPRESION:e rparen
                 {: RESULT = new ParseFloatNode(e); :}
-
             | kwNil
                 {: RESULT = new NilLiteral(); :}
-            | id:n lparen ARGUMENTOS:a rparen
-                {: RESULT = new FunctionCall(n, a); :}
             | lbracket rbracket lbracket rbracket TIPO:t lbrace FILAS_SLICE:f rbrace
                 {: RESULT = new MultiSliceLiteral(t, f); :}
-
-            | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket
-                {: RESULT = new MultiSliceAccess(n, i, j); :}
-
-            | id:n lbracket EXPRESION:i rbracket
-                {: RESULT = new SliceAccess(n, i); :}
             | kwLen lparen EXPRESION:e rparen
                 {: RESULT = new LenNode(e); :}
-
             | kwAppend lparen EXPRESION:s comma EXPRESION:v rparen
                 {: RESULT = new AppendNode(s, v); :}
-
             | kwSlices dot kwIndex lparen EXPRESION:s comma EXPRESION:v rparen
                 {: RESULT = new SlicesIndexNode(s, v); :}
-
             | kwStrings dot kwJoin lparen EXPRESION:s comma EXPRESION:sep rparen
                 {: RESULT = new StringsJoinNode(s, sep); :}
-
+            | lbrace STRUCT_VALUES:v rbrace
+                {: RESULT = new StructInlineLiteral(v); :}
+            | ACCESO:a
+                {: RESULT = a; :}
 ;

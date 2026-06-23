@@ -1,7 +1,7 @@
 package olc1.golite.visitor.interpreter.value;
 
 public sealed interface ValueWrapper
-    permits IntValue, DecimalValue, VoidValue, BoolValue, StringValue, SliceValue, RuneValue, NilValue {
+    permits IntValue, DecimalValue, VoidValue, BoolValue, StringValue, SliceValue, RuneValue, NilValue, StructValue {
     
     int line();
     int column();

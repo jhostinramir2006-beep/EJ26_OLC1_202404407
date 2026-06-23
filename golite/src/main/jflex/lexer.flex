@@ -159,6 +159,7 @@ str_lex = ({normal_char} | {escape_char})*
 
 "len"       { return new Symbol(sym.kwLen, yyline, yycolumn, yytext()); }
 "append"    { return new Symbol(sym.kwAppend, yyline, yycolumn, yytext()); }
+"struct"    { return new Symbol(sym.kwStruct, yyline, yycolumn, yytext()); }
 \'([^\'\\\n\r]|\\[nrt\'\\])\'
 {
     return new Symbol(sym.rune_literal, yyline, yycolumn, yytext());

@@ -12,8 +12,10 @@ import olc1.golite.visitor.interpreter.value.*;
 
 public class InterpreterVisitor implements Visitor<ValueWrapper> {
     public String output = "";
+    private String expectedStructType = null;
     private final ValueWrapper defaultVoid = new VoidValue(-1, -1);
-    private final Map<String, ValueWrapper> variables = new HashMap<>();    
+    private final Map<String, ValueWrapper> variables = new HashMap<>();   
+    private final Map<String, StructDecl.Context> structDefs = new HashMap<>(); 
     public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
     private final java.util.Deque<Map<String, ValueWrapper>> scopes = new java.util.ArrayDeque<>();
     private final Map<String, FunctionDecl.Context> functions = new HashMap<>();
@@ -32,6 +34,27 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             }
         }
         return null;
+    }
+    private ValueWrapper defaultValue(String type) {
+        return switch (type) {
+            case "int" -> new IntValue(0, -1, -1);
+            case "float64" -> new DecimalValue(0.0, -1, -1);
+            case "string" -> new StringValue("", -1, -1);
+            case "bool" -> new BoolValue(false, -1, -1);
+            case "rune" -> new RuneValue('\0', -1, -1);
+            default -> {
+                StructDecl.Context def = structDefs.get(type);
+                if (def != null) {
+                    Map<String, ValueWrapper> attrs = new HashMap<>();
+                    for (StructField field : def.fields) {
+                        attrs.put(field.name, defaultValue(field.type));
+                    }
+                    yield new StructValue(type, attrs, -1, -1);
+                }
+
+                yield new VoidValue(-1, -1);
+            }
+        };
     }
     private boolean equalsValues(ValueWrapper a, ValueWrapper b) {
         if (a instanceof IntValue x && b instanceof IntValue y) return x.value() == y.value();
@@ -1088,5 +1111,129 @@ public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
         row.values().set(colIndex, newValue);
 
         return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(StructDecl.Context ctx) {
+        if (ctx.fields == null || ctx.fields.isEmpty()) {
+            throw new RuntimeException("El struct " + ctx.name + " debe tener al menos un atributo");
+        }
+
+        structDefs.put(ctx.name, ctx);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(StructVarDecl.Context ctx) {
+        StructDecl.Context def = structDefs.get(ctx.structType);
+
+        if (def == null) {
+            throw new RuntimeException("Struct no definido: " + ctx.structType);
+        }
+
+        Map<String, ValueWrapper> attrs = new HashMap<>();
+
+        for (StructField field : def.fields) {
+            attrs.put(field.name, defaultValue(field.type));
+        }
+
+        for (StructAssignment assign : ctx.values) {
+            if (!attrs.containsKey(assign.name)) {
+                throw new RuntimeException("El struct " + ctx.structType + " no tiene atributo: " + assign.name);
+            }
+
+            String fieldType = null;
+
+            for (StructField field : def.fields) {
+                if (field.name.equals(assign.name)) {
+                    fieldType = field.type;
+                    break;
+                }
+            }
+
+            String previous = expectedStructType;
+            expectedStructType = fieldType;
+
+            ValueWrapper val = Visit(assign.value);
+
+            expectedStructType = previous;
+
+            attrs.put(assign.name, val);
+        }
+
+        currentScope().put(ctx.varName, new StructValue(ctx.structType, attrs, -1, -1));
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(StructAccess.Context ctx) {
+        ValueWrapper val = getVariable(ctx.varName);
+
+        if (!(val instanceof StructValue s)) {
+            throw new RuntimeException(ctx.varName + " no es un struct");
+        }
+
+        if (!s.attributes().containsKey(ctx.fieldName)) {
+            throw new RuntimeException("El struct " + s.structName() + " no tiene atributo: " + ctx.fieldName);
+        }
+
+        return s.attributes().get(ctx.fieldName);
+    }
+    @Override
+    public ValueWrapper visit(StructAssign.Context ctx) {
+        ValueWrapper val = getVariable(ctx.varName);
+
+        if (!(val instanceof StructValue s)) {
+            throw new RuntimeException(ctx.varName + " no es un struct");
+        }
+
+        if (!s.attributes().containsKey(ctx.fieldName)) {
+            throw new RuntimeException("El struct " + s.structName() + " no tiene atributo: " + ctx.fieldName);
+        }
+
+        ValueWrapper newVal = Visit(ctx.value);
+        s.attributes().put(ctx.fieldName, newVal);
+
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(StructInlineLiteral.Context ctx) {
+        if (expectedStructType == null) {
+            throw new RuntimeException("No se puede inferir el tipo del struct anidado");
+        }
+
+        StructDecl.Context def = structDefs.get(expectedStructType);
+
+        if (def == null) {
+            throw new RuntimeException("Struct no definido: " + expectedStructType);
+        }
+
+        Map<String, ValueWrapper> attrs = new HashMap<>();
+
+        for (StructField field : def.fields) {
+            attrs.put(field.name, defaultValue(field.type));
+        }
+
+        for (StructAssignment assign : ctx.values) {
+            if (!attrs.containsKey(assign.name)) {
+                throw new RuntimeException("El struct " + expectedStructType + " no tiene atributo: " + assign.name);
+            }
+
+            ValueWrapper val = Visit(assign.value);
+            attrs.put(assign.name, val);
+        }
+
+        return new StructValue(expectedStructType, attrs, -1, -1);
+    }
+    @Override
+    public ValueWrapper visit(StructAccessExpr.Context ctx) {
+        ValueWrapper obj = Visit(ctx.object);
+
+        if (!(obj instanceof StructValue s)) {
+            throw new RuntimeException("No es un struct");
+        }
+
+        if (!s.attributes().containsKey(ctx.fieldName)) {
+            throw new RuntimeException("El struct " + s.structName() + " no tiene atributo: " + ctx.fieldName);
+        }
+
+        return s.attributes().get(ctx.fieldName);
     }
 }

@@ -63,4 +63,10 @@ public interface Visitor<T> {
     T visit(MultiSliceLiteral.Context ctx);
     T visit(MultiSliceAccess.Context ctx);
     T visit(MultiSliceAssign.Context ctx);
+    T visit(StructDecl.Context ctx);
+    T visit(StructVarDecl.Context ctx);
+    T visit(StructAccess.Context ctx);
+    T visit(StructAssign.Context ctx);
+    T visit(StructInlineLiteral.Context ctx);
+    T visit(StructAccessExpr.Context ctx);
 }
