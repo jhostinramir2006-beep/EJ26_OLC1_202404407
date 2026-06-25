@@ -61,6 +61,29 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             }
         };
     }
+    private ValueWrapper copyIfPrimitive(ValueWrapper value) {
+        if (value instanceof IntValue v) {
+            return new IntValue(v.value(), v.line(), v.column());
+        }
+
+        if (value instanceof DecimalValue v) {
+            return new DecimalValue(v.value(), v.line(), v.column());
+        }
+
+        if (value instanceof StringValue v) {
+            return new StringValue(v.value(), v.line(), v.column());
+        }
+
+        if (value instanceof BoolValue v) {
+            return new BoolValue(v.value(), v.line(), v.column());
+        }
+
+        if (value instanceof RuneValue v) {
+            return new RuneValue(v.value(), v.line(), v.column());
+        }
+
+        return value; // structs y slices por referencia
+    }
     private boolean equalsValues(ValueWrapper a, ValueWrapper b) {
         if (a instanceof IntValue x && b instanceof IntValue y) return x.value() == y.value();
         if (a instanceof DecimalValue x && b instanceof DecimalValue y) return x.value() == y.value();
@@ -874,21 +897,42 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             throw new RuntimeException("Cantidad incorrecta de argumentos en funcion: " + ctx.name);
         }
 
+        java.util.Set<String> paramNames = new java.util.HashSet<>();
+
         scopes.push(new HashMap<>());
 
         try {
             for (int i = 0; i < fn.params.size(); i++) {
                 ParameterNode param = (ParameterNode) fn.params.get(i);
-                ValueWrapper argValue = Visit(ctx.args.get(i));
 
-                currentScope().put(param.name, argValue);
+                if (paramNames.contains(param.name)) {
+                    throw new RuntimeException("Parametro duplicado: " + param.name);
+                }
+
+                paramNames.add(param.name);
+
+                ValueWrapper argValue = Visit(ctx.args.get(i));
+                currentScope().put(param.name, copyIfPrimitive(argValue));
             }
 
             Visit(fn.body);
 
         } catch (ReturnException r) {
             scopes.pop();
+
+            if (!fn.returnType.equals("void") && !r.value.getTypeName().equals(fn.returnType)) {
+                throw new RuntimeException(
+                    "La funcion " + ctx.name + " debe retornar " + fn.returnType +
+                    " pero retorno " + r.value.getTypeName()
+                );
+            }
+
             return r.value;
+        }
+
+        if (!fn.returnType.equals("void")) {
+            scopes.pop();
+            throw new RuntimeException("La funcion " + ctx.name + " debe retornar " + fn.returnType);
         }
 
         scopes.pop();

@@ -182,10 +182,19 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new StructAssign(n, a, e); :}
                 | id:n dot id:m lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new StructMethodCall(new VarRef(n, nleft, nright), m, a); :}
+                | id:n lparen ARGUMENTOS:a rparen FIN
+                    {: RESULT = new FunctionCall(n, a); :}
 ;
 
 FUNCION ::= kwFunc id:n lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
                 {: RESULT = new FunctionDecl(n, p, t, b); :}
+
+          | kwFunc id:n lparen PARAMETROS:p rparen TIPO_SLICE:t BLOQUE:b
+                {: RESULT = new FunctionDecl(n, p, t, b); :}
+
+          | kwFunc id:n lparen PARAMETROS:p rparen id:t BLOQUE:b
+                {: RESULT = new FunctionDecl(n, p, t, b); :}
+
           | kwFunc id:n lparen PARAMETROS:p rparen BLOQUE:b
                 {: RESULT = new FunctionDecl(n, p, "void", b); :}
 ;
@@ -203,6 +212,12 @@ LISTA_PARAMETROS ::= LISTA_PARAMETROS:l comma PARAMETRO:p
 ;
 
 PARAMETRO ::= id:n TIPO:t
+                {: RESULT = new ParameterNode(n, t); :}
+
+            | id:n TIPO_SLICE:t
+                {: RESULT = new ParameterNode(n, t); :}
+
+            | id:n id:t
                 {: RESULT = new ParameterNode(n, t); :}
 ;
 
