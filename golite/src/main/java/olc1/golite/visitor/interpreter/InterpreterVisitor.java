@@ -1363,4 +1363,44 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
         return defaultVoid;
     }
+    @Override
+    public ValueWrapper visit(StructTypedLiteral.Context ctx) {
+        StructDecl.Context def = structDefs.get(ctx.structType);
+
+        if (def == null) {
+            throw new RuntimeException("Struct no definido: " + ctx.structType);
+        }
+
+        Map<String, ValueWrapper> attrs = new HashMap<>();
+
+        for (StructField field : def.fields) {
+            attrs.put(field.name, defaultValue(field.type));
+        }
+
+        for (StructAssignment assign : ctx.values) {
+            if (!attrs.containsKey(assign.name)) {
+                throw new RuntimeException("El struct " + ctx.structType + " no tiene atributo: " + assign.name);
+            }
+
+            String fieldType = null;
+
+            for (StructField field : def.fields) {
+                if (field.name.equals(assign.name)) {
+                    fieldType = field.type;
+                    break;
+                }
+            }
+
+            String previous = expectedStructType;
+            expectedStructType = fieldType;
+
+            ValueWrapper val = Visit(assign.value);
+
+            expectedStructType = previous;
+
+            attrs.put(assign.name, val);
+        }
+
+        return new StructValue(ctx.structType, attrs, -1, -1);
+    }
 }

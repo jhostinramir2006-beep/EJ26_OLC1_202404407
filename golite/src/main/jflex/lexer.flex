@@ -165,6 +165,27 @@ str_lex = ({normal_char} | {escape_char})*
 {
     return new Symbol(sym.rune_literal, yyline, yycolumn, yytext());
 }
+{letter}({letter}|{digit}|_)*"{" {
+    String txt = yytext();
+    String nombre = txt.substring(0, txt.length() - 1);
+
+    yypushback(1);
+
+    switch (nombre) {
+        case "int":
+            return new Symbol(sym.kwInt, yyline, yycolumn, nombre);
+        case "float64":
+            return new Symbol(sym.kwFloat64, yyline, yycolumn, nombre);
+        case "string":
+            return new Symbol(sym.kwString, yyline, yycolumn, nombre);
+        case "bool":
+            return new Symbol(sym.kwBool, yyline, yycolumn, nombre);
+        case "rune":
+            return new Symbol(sym.kwRune, yyline, yycolumn, nombre);
+        default:
+            return new Symbol(sym.struct_type, yyline, yycolumn, nombre);
+    }
+}
 // ID - String
 {letter}({letter}|{digit})* {
     return new Symbol(sym.id, yyline, yycolumn, yytext());

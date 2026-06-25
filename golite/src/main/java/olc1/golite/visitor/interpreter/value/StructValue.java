@@ -16,6 +16,24 @@ public record StructValue(
 
     @Override
     public String toString() {
-        return structName + attributes.toString();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(structName).append("{");
+
+        int i = 0;
+
+        for (Map.Entry<String, ValueWrapper> entry : attributes.entrySet()) {
+            if (i > 0) sb.append(", ");
+
+            sb.append(entry.getKey())
+            .append(": ")
+            .append(entry.getValue().toString());
+
+            i++;
+        }
+
+        sb.append("}");
+
+        return sb.toString();
     }
 }

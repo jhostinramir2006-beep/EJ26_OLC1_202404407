@@ -64,6 +64,7 @@ terminal kwSlices, kwIndex;
 terminal kwStrings, kwJoin;
 terminal kwLen, kwAppend;
 terminal kwStruct;
+terminal String struct_type;
 
 nonterminal ASTNode FUNCION;
 nonterminal java.util.List PARAMETROS;
@@ -95,6 +96,7 @@ nonterminal ASTNode ACCESO;
 nonterminal ASTNode METHOD_FUNCION;
 nonterminal java.util.List GLOBALS;
 nonterminal ASTNode GLOBAL;
+nonterminal ASTNode PRIMARIO;
 
 precedence left or;
 precedence left and;
@@ -123,6 +125,8 @@ INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
 ;
 
 INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = new Imprimir(e); :}
+                | id:n declare EXPRESION:e FIN
+                    {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
                 | id:n assign EXPRESION:e FIN                          {: RESULT = new Assign(n, e, nleft, nright); :}
                 | kwIf EXPRESION:c BLOQUE:b
                     {: RESULT = new IfNode(c, b, null); :}
@@ -154,8 +158,6 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new Increment(n, nleft, nright); :}
                 | id:n dec FIN
                     {: RESULT = new Decrement(n, nleft, nright); :}
-                | id:n declare EXPRESION:e FIN
-                    {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
                 | kwVar id:n TIPO:t FIN
                     {: RESULT = new VarDecl(n, t, null, nleft, nright); :}
                 | kwFor id:i comma id:v declare kwRange id:s BLOQUE:b
@@ -319,8 +321,15 @@ STRUCT_VALUES ::= STRUCT_VALUES:l comma STRUCT_VALUE:v
 STRUCT_VALUE ::= id:n colon EXPRESION:e
                     {: RESULT = new StructAssignment(n, e); :}
 ;
-ACCESO ::= id:n
-            {: RESULT = new VarRef(n, nleft, nright); :}
+PRIMARIO ::= struct_type:t lbrace STRUCT_VALUES:v rbrace
+                {: RESULT = new StructTypedLiteral(t, v); :}
+           | id:n
+                {: RESULT = new VarRef(n, nleft, nright); :}
+          
+;
+
+ACCESO ::= PRIMARIO:p
+            {: RESULT = p; :}
 
          | id:n lparen ARGUMENTOS:a rparen
             {: RESULT = new FunctionCall(n, a); :}
