@@ -69,4 +69,6 @@ public interface Visitor<T> {
     T visit(StructAssign.Context ctx);
     T visit(StructInlineLiteral.Context ctx);
     T visit(StructAccessExpr.Context ctx);
+    T visit(StructMethodDecl.Context ctx);
+    T visit(StructMethodCall.Context ctx);
 }

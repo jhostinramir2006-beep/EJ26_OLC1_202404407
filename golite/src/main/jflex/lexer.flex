@@ -109,57 +109,58 @@ str_lex = ({normal_char} | {escape_char})*
 ";"     { return new Symbol(sym.scol, yyline, yycolumn, yytext()); }
 
 "{"     { return new Symbol(sym.lbrace, yyline, yycolumn, yytext()); }
-"}"     { return new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
-"["     { return new Symbol(sym.lbracket, yyline, yycolumn, yytext()); }
-"]"     { return new Symbol(sym.rbracket, yyline, yycolumn, yytext()); }
+"}"             { return  new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
+"["             { return new Symbol(sym.lbracket, yyline, yycolumn, yytext()); }
+"]"             { return new Symbol(sym.rbracket, yyline, yycolumn, yytext()); }
 // Key Words
 
-"for"       { return new Symbol(sym.kwFor, yyline, yycolumn, yytext()); }
-"func"      { return new Symbol(sym.kwFunc, yyline, yycolumn, yytext()); }
+"for"           { return new Symbol(sym.kwFor, yyline, yycolumn, yytext()); }
+"func"          { return new Symbol(sym.kwFunc, yyline, yycolumn, yytext()); }
 
-"if"        { return new Symbol(sym.kwIf, yyline, yycolumn, yytext()); }
-"else"      { return new Symbol(sym.kwElse, yyline, yycolumn, yytext()); }
+"if"            { return new Symbol(sym.kwIf, yyline, yycolumn, yytext()); }
+"else"          { return new Symbol(sym.kwElse, yyline, yycolumn, yytext()); }
 
-"break"     { return new Symbol(sym.kwBreak, yyline, yycolumn, yytext()); }
-"continue"  { return new Symbol(sym.kwContinue, yyline, yycolumn, yytext()); }
+"break"         { return new Symbol(sym.kwBreak, yyline, yycolumn, yytext()); }
+"continue"      { return new Symbol(sym.kwContinue, yyline, yycolumn, yytext()); }
 
-"var"       { return new Symbol(sym.kwVar, yyline, yycolumn, yytext()); }
+"var"           { return new Symbol(sym.kwVar, yyline, yycolumn, yytext()); }
 
-"int"       { return new Symbol(sym.kwInt, yyline, yycolumn, yytext()); }
-"float64"   { return new Symbol(sym.kwFloat64, yyline, yycolumn, yytext()); }
-"string"    { return new Symbol(sym.kwString, yyline, yycolumn, yytext()); }
-"bool"      { return new Symbol(sym.kwBool, yyline, yycolumn, yytext()); }
+"int"           { return new Symbol(sym.kwInt, yyline, yycolumn, yytext()); }
+"float64"       { return new Symbol(sym.kwFloat64, yyline, yycolumn, yytext()); }
+"string"        { return new Symbol(sym.kwString, yyline, yycolumn, yytext()); }
+"bool"          { return new Symbol(sym.kwBool, yyline, yycolumn, yytext()); }
 
-"true"      { return new Symbol(sym.kwTrue, yyline, yycolumn, yytext()); }
-"false"     { return new Symbol(sym.kwFalse, yyline, yycolumn, yytext()); }
+"true"          { return new Symbol(sym.kwTrue, yyline, yycolumn, yytext()); }
+"false"         { return new Symbol(sym.kwFalse, yyline, yycolumn, yytext()); }
 
-"fmt"       { return new Symbol(sym.kwFmt, yyline, yycolumn, yytext()); }
+"fmt"           { return new Symbol(sym.kwFmt, yyline, yycolumn, yytext()); }
 
-"imprimir"  { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
-"rune"      { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
-"range"     { return new Symbol(sym.kwRange, yyline, yycolumn, yytext()); }
-"reflect"   { return new Symbol(sym.kwReflect, yyline, yycolumn, yytext()); }
-"TypeOf"    { return new Symbol(sym.kwTypeOf, yyline, yycolumn, yytext()); }
+"imprimir"      { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
+"rune"          { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
+"range"         { return new Symbol(sym.kwRange, yyline, yycolumn, yytext()); }
+"reflect"       { return new Symbol(sym.kwReflect, yyline, yycolumn, yytext()); }
+"TypeOf"        { return new Symbol(sym.kwTypeOf, yyline, yycolumn, yytext()); }
 
-"strconv"   { return new Symbol(sym.kwStrconv, yyline, yycolumn, yytext()); }
-"Atoi"      { return new Symbol(sym.kwAtoi, yyline, yycolumn, yytext()); }
-"ParseFloat"  { return new Symbol(sym.kwParseFloat, yyline, yycolumn, yytext()); }
+"strconv"       { return new Symbol(sym.kwStrconv, yyline, yycolumn, yytext()); }
+"Atoi"          { return new Symbol(sym.kwAtoi, yyline, yycolumn, yytext()); }
+"ParseFloat"    { return new Symbol(sym.kwParseFloat, yyline, yycolumn, yytext()); }
 
-"nil"       { return new Symbol(sym.kwNil, yyline, yycolumn, yytext()); }
-"switch"    { return new Symbol(sym.kwSwitch, yyline, yycolumn, yytext()); }
-"case"      { return new Symbol(sym.kwCase, yyline, yycolumn, yytext()); }
-"default"   { return new Symbol(sym.kwDefault, yyline, yycolumn, yytext()); }
-":"         { return new Symbol(sym.colon, yyline, yycolumn, yytext()); }
-"return"    { return new Symbol(sym.kwReturn, yyline, yycolumn, yytext()); }
-"slices"    { return new Symbol(sym.kwSlices, yyline, yycolumn, yytext()); }
-"Index"     { return new Symbol(sym.kwIndex, yyline, yycolumn, yytext()); }
+"nil"           { return new Symbol(sym.kwNil, yyline, yycolumn, yytext()); }
+"switch"        { return new Symbol(sym.kwSwitch, yyline, yycolumn, yytext()); }
+"case"          { return new Symbol(sym.kwCase, yyline, yycolumn, yytext()); }
+"default"       { return new Symbol(sym.kwDefault, yyline, yycolumn, yytext()); }
+":"             { return new Symbol(sym.colon, yyline, yycolumn, yytext()); }
+"return"        { return new Symbol(sym.kwReturn, yyline, yycolumn, yytext()); }
+"slices"        { return new Symbol(sym.kwSlices, yyline, yycolumn, yytext()); }
+"Index"         { return new Symbol(sym.kwIndex, yyline, yycolumn, yytext()); }
 
-"strings"   { return new Symbol(sym.kwStrings, yyline, yycolumn, yytext()); }
-"Join"      { return new Symbol(sym.kwJoin, yyline, yycolumn, yytext()); }
+"strings"       { return new Symbol(sym.kwStrings, yyline, yycolumn, yytext()); }
+"Join"          { return new Symbol(sym.kwJoin, yyline, yycolumn, yytext()); }
 
-"len"       { return new Symbol(sym.kwLen, yyline, yycolumn, yytext()); }
-"append"    { return new Symbol(sym.kwAppend, yyline, yycolumn, yytext()); }
-"struct"    { return new Symbol(sym.kwStruct, yyline, yycolumn, yytext()); }
+"len"           { return new Symbol(sym.kwLen, yyline, yycolumn, yytext()); }
+"append"        { return new Symbol(sym.kwAppend, yyline, yycolumn, yytext()); }
+"struct"        { return new Symbol(sym.kwStruct, yyline, yycolumn, yytext()); }
+
 \'([^\'\\\n\r]|\\[nrt\'\\])\'
 {
     return new Symbol(sym.rune_literal, yyline, yycolumn, yytext());

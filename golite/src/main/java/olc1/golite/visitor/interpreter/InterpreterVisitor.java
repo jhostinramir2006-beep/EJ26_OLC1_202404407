@@ -15,7 +15,9 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     private String expectedStructType = null;
     private final ValueWrapper defaultVoid = new VoidValue(-1, -1);
     private final Map<String, ValueWrapper> variables = new HashMap<>();   
+    private boolean insideMethod = false;
     private final Map<String, StructDecl.Context> structDefs = new HashMap<>(); 
+    private final Map<String, StructMethodDecl.Context> structMethods = new HashMap<>();
     public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
     private final java.util.Deque<Map<String, ValueWrapper>> scopes = new java.util.ArrayDeque<>();
     private final Map<String, FunctionDecl.Context> functions = new HashMap<>();
@@ -34,6 +36,9 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             }
         }
         return null;
+    }
+    private String methodKey(String structName, String methodName) {
+        return structName + "." + methodName;
     }
     private ValueWrapper defaultValue(String type) {
         return switch (type) {
@@ -201,15 +206,15 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         return defaultVoid;
     }
 
-@Override
-public ValueWrapper visit(Statments.Context ctx) {
-    for (ASTNode statment : ctx.statements) {
-        if (statment != null) {
-            Visit(statment);
+    @Override
+    public ValueWrapper visit(Statments.Context ctx) {
+        for (ASTNode statment : ctx.statements) {
+            if (statment != null) {
+                Visit(statment);
+            }
         }
+        return defaultVoid;
     }
-    return defaultVoid;
-}
 
     @Override
     public ValueWrapper visit(Paren.Context ctx) {
@@ -489,105 +494,105 @@ public ValueWrapper visit(Statments.Context ctx) {
         throw new RuntimeException("Operacion invalida: % solo acepta enteros");
     }
     @Override
-public ValueWrapper visit(PlusAssign.Context ctx) {
-    ValueWrapper current = getVariable(ctx.name);
+    public ValueWrapper visit(PlusAssign.Context ctx) {
+        ValueWrapper current = getVariable(ctx.name);
 
-    if (current == null) {
-        throw new RuntimeException("Variable no definida: " + ctx.name);
-    }
-
-    ValueWrapper right = Visit(ctx.value);
-
-    ValueWrapper result = switch (current) {
-        case IntValue l when right instanceof IntValue r ->
-            new IntValue(l.value() + r.value(), l.line(), l.column());
-
-        case IntValue l when right instanceof DecimalValue r ->
-            new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-        case DecimalValue l when right instanceof IntValue r ->
-            new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-        case DecimalValue l when right instanceof DecimalValue r ->
-            new DecimalValue(l.value() + r.value(), l.line(), l.column());
-
-        case StringValue l when right instanceof StringValue r ->
-            new StringValue(l.value() + r.value(), l.line(), l.column());
-
-        default -> throw new RuntimeException(
-            "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
-        );
-    };
-
-    setVariable(ctx.name, result);
-    return defaultVoid;
-}
-@Override
-public ValueWrapper visit(MinusAssign.Context ctx) {
-    ValueWrapper current = getVariable(ctx.name);
-
-    if (current == null) {
-        throw new RuntimeException("Variable no definida: " + ctx.name);
-    }
-
-    ValueWrapper right = Visit(ctx.value);
-
-    ValueWrapper result = switch (current) {
-        case IntValue l when right instanceof IntValue r ->
-            new IntValue(l.value() - r.value(), l.line(), l.column());
-
-        case IntValue l when right instanceof DecimalValue r ->
-            new DecimalValue(l.value() - r.value(), l.line(), l.column());
-
-        case DecimalValue l when right instanceof IntValue r ->
-            new DecimalValue(l.value() - r.value(), l.line(), l.column());
-
-        case DecimalValue l when right instanceof DecimalValue r ->
-            new DecimalValue(l.value() - r.value(), l.line(), l.column());
-
-        default -> throw new RuntimeException(
-            "Operacion invalida: " + current.getTypeName() + " -= " + right.getTypeName()
-        );
-    };
-
-    setVariable(ctx.name, result);
-    return defaultVoid;
-}
-@Override
-public ValueWrapper visit(ForNode.Context ctx) {
-    if (ctx.init != null) {
-        Visit(ctx.init);
-    }
-
-    while (true) {
-        ValueWrapper cond = Visit(ctx.condition);
-
-        if (!(cond instanceof BoolValue b)) {
-            throw new RuntimeException("La condicion del for debe ser booleana");
+        if (current == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
         }
 
-        if (!b.value()) {
-            break;
+        ValueWrapper right = Visit(ctx.value);
+
+        ValueWrapper result = switch (current) {
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() + r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+
+            case StringValue l when right instanceof StringValue r ->
+                new StringValue(l.value() + r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
+            );
+        };
+
+        setVariable(ctx.name, result);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(MinusAssign.Context ctx) {
+        ValueWrapper current = getVariable(ctx.name);
+
+        if (current == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.name);
         }
 
-        try {
-            Visit(ctx.body);
-        } catch (ContinueException e) {
+        ValueWrapper right = Visit(ctx.value);
+
+        ValueWrapper result = switch (current) {
+            case IntValue l when right instanceof IntValue r ->
+                new IntValue(l.value() - r.value(), l.line(), l.column());
+
+            case IntValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof IntValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            case DecimalValue l when right instanceof DecimalValue r ->
+                new DecimalValue(l.value() - r.value(), l.line(), l.column());
+
+            default -> throw new RuntimeException(
+                "Operacion invalida: " + current.getTypeName() + " -= " + right.getTypeName()
+            );
+        };
+
+        setVariable(ctx.name, result);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(ForNode.Context ctx) {
+        if (ctx.init != null) {
+            Visit(ctx.init);
+        }
+
+        while (true) {
+            ValueWrapper cond = Visit(ctx.condition);
+
+            if (!(cond instanceof BoolValue b)) {
+                throw new RuntimeException("La condicion del for debe ser booleana");
+            }
+
+            if (!b.value()) {
+                break;
+            }
+
+            try {
+                Visit(ctx.body);
+            } catch (ContinueException e) {
+                if (ctx.update != null) {
+                    Visit(ctx.update);
+                }
+                continue;
+            } catch (BreakException e) {
+                break;
+            }
+
             if (ctx.update != null) {
                 Visit(ctx.update);
             }
-            continue;
-        } catch (BreakException e) {
-            break;
         }
 
-        if (ctx.update != null) {
-            Visit(ctx.update);
-        }
+        return defaultVoid;
     }
-
-    return defaultVoid;
-}
     @Override
     public ValueWrapper visit(Increment.Context ctx) {
         ValueWrapper val = getVariable(ctx.name);
@@ -764,6 +769,11 @@ public ValueWrapper visit(ForNode.Context ctx) {
     }
     @Override
     public ValueWrapper visit(BlockNode.Context ctx) {
+        if (insideMethod) {
+            Visit(ctx.body);
+            return defaultVoid;
+        }
+
         scopes.push(new HashMap<>());
 
         try {
@@ -804,20 +814,37 @@ public ValueWrapper visit(ForNode.Context ctx) {
     }
     @Override
     public ValueWrapper visit(ProgramNode.Context ctx) {
-        for (ASTNode fn : ctx.functions) {
-            if (fn instanceof FunctionDecl f) {
+
+        for (ASTNode node : ctx.functions) {
+            if (node instanceof StructDecl s) {
+                Visit(s);
+            }
+
+            if (node instanceof FunctionDecl f) {
                 FunctionDecl.Context fctx = new FunctionDecl.Context(f);
                 functions.put(fctx.name, fctx);
+            }
+
+            if (node instanceof StructMethodDecl m) {
+                StructMethodDecl.Context mctx = new StructMethodDecl.Context(m);
+                structMethods.put(methodKey(mctx.structName, mctx.methodName), mctx);
             }
         }
 
         FunctionDecl.Context main = functions.get("main");
 
-        if (main == null) {
-            throw new RuntimeException("No existe funcion main");
+        if (main != null) {
+            Visit(main.body);
+            return defaultVoid;
         }
 
-        Visit(main.body);
+        for (ASTNode node : ctx.functions) {
+            if (!(node instanceof StructDecl) &&
+                !(node instanceof FunctionDecl) &&
+                !(node instanceof StructMethodDecl)) {
+                Visit(node);
+            }
+        }
 
         return defaultVoid;
     }
@@ -1022,17 +1049,17 @@ public ValueWrapper visit(ForNode.Context ctx) {
 
         return new StringValue(String.join(sep.value(), partes), slice.line(), slice.column());
     }
-@Override
-public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
-    java.util.List<ValueWrapper> rows = new java.util.ArrayList<>();
+    @Override
+    public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
+        java.util.List<ValueWrapper> rows = new java.util.ArrayList<>();
 
-    for (ASTNode rowNode : ctx.rows) {
-        ValueWrapper row = Visit(rowNode);
-        rows.add(row);
+        for (ASTNode rowNode : ctx.rows) {
+            ValueWrapper row = Visit(rowNode);
+            rows.add(row);
+        }
+
+        return new SliceValue("[]" + ctx.type, rows, -1, -1);
     }
-
-    return new SliceValue("[]" + ctx.type, rows, -1, -1);
-}
     @Override
     public ValueWrapper visit(MultiSliceAccess.Context ctx) {
         ValueWrapper matrixVal = getVariable(ctx.name);
@@ -1180,8 +1207,12 @@ public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
     public ValueWrapper visit(StructAssign.Context ctx) {
         ValueWrapper val = getVariable(ctx.varName);
 
+        if (val == null) {
+            throw new RuntimeException("Variable no definida: " + ctx.varName);
+        }
+
         if (!(val instanceof StructValue s)) {
-            throw new RuntimeException(ctx.varName + " no es un struct");
+            throw new RuntimeException(ctx.varName + " no es un struct, es: " + val.getTypeName());
         }
 
         if (!s.attributes().containsKey(ctx.fieldName)) {
@@ -1235,5 +1266,57 @@ public ValueWrapper visit(MultiSliceLiteral.Context ctx) {
         }
 
         return s.attributes().get(ctx.fieldName);
+    }
+    @Override
+    public ValueWrapper visit(StructMethodDecl.Context ctx) {
+        structMethods.put(methodKey(ctx.structName, ctx.methodName), ctx);
+        return defaultVoid;
+    }
+    @Override
+    public ValueWrapper visit(StructMethodCall.Context ctx) {
+        ValueWrapper obj = Visit(ctx.object);
+
+        if (!(obj instanceof StructValue structObj)) {
+            throw new RuntimeException("La llamada de metodo requiere un struct");
+        }
+
+        StructMethodDecl.Context method =
+                structMethods.get(methodKey(structObj.structName(), ctx.methodName));
+
+        if (method == null) {
+            throw new RuntimeException(
+                "Metodo no definido: " + structObj.structName() + "." + ctx.methodName
+            );
+        }
+
+        if (ctx.args.size() != method.params.size()) {
+            throw new RuntimeException("Cantidad incorrecta de argumentos en metodo: " + ctx.methodName);
+        }
+
+        Map<String, ValueWrapper> methodScope = new HashMap<>();
+        methodScope.put(method.referenceName, structObj);
+
+        scopes.push(methodScope);
+
+        boolean previousInsideMethod = insideMethod;
+        insideMethod = true;
+
+        try {
+            for (int i = 0; i < method.params.size(); i++) {
+                ParameterNode param = (ParameterNode) method.params.get(i);
+                ValueWrapper argValue = Visit(ctx.args.get(i));
+                currentScope().put(param.name, argValue);
+            }
+
+            Visit(method.body);
+
+        } catch (ReturnException r) {
+            return r.value;
+        } finally {
+            insideMethod = previousInsideMethod;
+            scopes.pop();
+        }
+
+        return defaultVoid;
     }
 }

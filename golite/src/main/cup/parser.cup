@@ -65,7 +65,6 @@ terminal kwStrings, kwJoin;
 terminal kwLen, kwAppend;
 terminal kwStruct;
 
-nonterminal java.util.List FUNCIONES;
 nonterminal ASTNode FUNCION;
 nonterminal java.util.List PARAMETROS;
 nonterminal java.util.List LISTA_PARAMETROS;
@@ -93,6 +92,9 @@ nonterminal StructField STRUCT_FIELD;
 nonterminal java.util.List STRUCT_VALUES;
 nonterminal StructAssignment STRUCT_VALUE;
 nonterminal ASTNode ACCESO;
+nonterminal ASTNode METHOD_FUNCION;
+nonterminal java.util.List GLOBALS;
+nonterminal ASTNode GLOBAL;
 
 precedence left or;
 precedence left and;
@@ -111,10 +113,8 @@ FIN ::= scol
 ;
 // Gramatica
 
-INICIO ::= FUNCIONES:f
-            {: RESULT = new ProgramNode(f); :}
-         | INSTRUCCIONES:i
-            {: RESULT = i; :}
+INICIO ::= GLOBALS:g
+            {: RESULT = new ProgramNode(g); :}
 ;
 
 INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
@@ -174,19 +174,14 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new SliceAssign(n, i, e); :}
                 | id:n lbracket EXPRESION:i rbracket lbracket EXPRESION:j rbracket assign EXPRESION:e FIN
                     {: RESULT = new MultiSliceAssign(n, i, j, e); :}
-                | kwStruct id:n lbrace STRUCT_FIELDS:f rbrace
-                    {: RESULT = new StructDecl(n, f); :}
                 | id:t id:n assign lbrace STRUCT_VALUES:v rbrace FIN
                     {: RESULT = new StructVarDecl(t, n, v); :}
                 | TIPO:t id:n assign EXPRESION:e FIN
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
                 | id:n dot id:a assign EXPRESION:e FIN
                     {: RESULT = new StructAssign(n, a, e); :}
-;
-FUNCIONES ::= FUNCIONES:fs FUNCION:f
-                {: fs.add(f); RESULT = fs; :}
-            | FUNCION:f
-                {: ArrayList fs = new ArrayList(); fs.add(f); RESULT = fs; :}
+                | id:n dot id:m lparen ARGUMENTOS:a rparen FIN
+                    {: RESULT = new StructMethodCall(new VarRef(n, nleft, nright), m, a); :}
 ;
 
 FUNCION ::= kwFunc id:n lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
@@ -323,6 +318,29 @@ ACCESO ::= id:n
 
          | ACCESO:e dot id:a
             {: RESULT = new StructAccessExpr(e, a); :}
+;
+METHOD_FUNCION ::= kwFunc lparen id:ref id:structName rparen id:name lparen PARAMETROS:p rparen BLOQUE:b
+                    {: RESULT = new StructMethodDecl(ref, structName, name, p, "void", b); :}
+
+                | kwFunc lparen id:ref id:structName rparen id:name lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
+                    {: RESULT = new StructMethodDecl(ref, structName, name, p, t, b); :}
+;
+GLOBALS ::= GLOBALS:g GLOBAL:x
+                {: if (x != null) g.add(x); RESULT = g; :}
+          | GLOBAL:x
+                {: ArrayList g = new ArrayList(); if (x != null) g.add(x); RESULT = g; :}
+;
+GLOBAL ::= FUNCION:f
+            {: RESULT = f; :}
+
+         | METHOD_FUNCION:m
+            {: RESULT = m; :}
+
+         | kwStruct id:n lbrace STRUCT_FIELDS:f rbrace
+            {: RESULT = new StructDecl(n, f); :}
+
+         | INSTRUCCION:i
+            {: RESULT = i; :}
 ;
 EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec UMENOS
             | EXPRESION:a plus EXPRESION:b  {: RESULT = new Add(a, b); :}
