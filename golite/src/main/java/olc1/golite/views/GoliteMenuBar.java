@@ -10,6 +10,7 @@ public class GoliteMenuBar extends JMenuBar {
     private final JMenuItem newItem;
     private final JMenuItem exitItem;
     private final JButton runButton;
+    private final JButton loadButton;
     private final JButton cleanButton;
     private final JMenuItem tokensItem;
     private final JMenuItem errorsItem;
@@ -18,6 +19,7 @@ public class GoliteMenuBar extends JMenuBar {
     public GoliteMenuBar() {
         JMenu fileMenu = new JMenu("Archivo");
         runButton = createButton("Ejecutar");
+        loadButton = createButton("Cargar");
         JMenu reportMenu = new JMenu("Reportes");
         cleanButton = createButton("Limpiar consola");
         JMenu helpMenu = new JMenu("Ayuda");
@@ -37,6 +39,7 @@ public class GoliteMenuBar extends JMenuBar {
         helpMenu.add(aboutItem);
 
         add(fileMenu);
+        add(loadButton);
         add(runButton);
         add(reportMenu);
         add(cleanButton);
@@ -50,6 +53,7 @@ public class GoliteMenuBar extends JMenuBar {
     public void onTokens(ActionListener l) { tokensItem.addActionListener(l); }
     public void onErrors(ActionListener l) { errorsItem.addActionListener(l); }
     public void onAbout(ActionListener l)  { aboutItem.addActionListener(l); }
+    public void onLoad(ActionListener l) { loadButton.addActionListener(l); }
 
     private static JButton createButton(String text) {
         JButton button = new JButton(text);

@@ -12,6 +12,11 @@ import olc1.golite.parser;
 import olc1.golite.ast.ASTNode;
 import olc1.golite.reports.GoliteError;
 import olc1.golite.visitor.interpreter.InterpreterVisitor;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 public class GoliteFrame extends JFrame {
     private final EditorPanel editorPanel;
@@ -41,9 +46,10 @@ public class GoliteFrame extends JFrame {
     }
 
     private void wireActions(GoliteMenuBar menuBar) {
+        menuBar.onLoad(e -> loadFile());
         menuBar.onRun(e -> run());
         menuBar.onClean(e -> cleanConsole());
-        menuBar.onNew(e -> editorPanel.setText("imprimir(5+5);\n"));
+        menuBar.onNew(e -> editorPanel.setText(""));
         menuBar.onExit(e -> System.exit(0));
         menuBar.onTokens(e -> {
             /* TODO: reporte de tokens */ });
@@ -56,19 +62,30 @@ public class GoliteFrame extends JFrame {
     }
 
     private void run() {
+        cleanConsole();
+
         try {
             lexer = new Lexer(new BufferedReader(new StringReader(editorPanel.getText())));
             parser = new parser(lexer);
 
-            ASTNode ast = (ASTNode) parser.parse().value;
+            Object result = parser.parse().value;
+
+            if (result == null) {
+                consoleTextArea.append("No se pudo generar AST.\n");
+                return;
+            }
+
+            ASTNode ast = (ASTNode) result;
+
             InterpreterVisitor interpreter = new InterpreterVisitor();
             interpreter.Visit(ast);
 
-            cleanConsole();
             consoleTextArea.append(interpreter.output);
+
         } catch (Exception e) {
             consoleTextArea.append("Error: " + e.getMessage() + "\n");
         }
+
         consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
         editorPanel.getTextArea().requestFocus();
     }
@@ -104,5 +121,35 @@ public class GoliteFrame extends JFrame {
 
     public JTextArea getConsoleTextArea() {
         return consoleTextArea;
+    }
+    private void loadFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Cargar archivo GoLite");
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "Archivos GoLite (*.glt, *.go, *.txt)",
+                "glt", "go", "txt"
+        ));
+
+        int result = chooser.showOpenDialog(this);
+
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File file = chooser.getSelectedFile();
+
+        try {
+            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+
+            editorPanel.setText(content);
+            cleanConsole();
+            consoleTextArea.append("Archivo cargado: " + file.getName() + "\n");
+
+        } catch (Exception e) {
+            cleanConsole();
+            consoleTextArea.append("Error al cargar archivo: " + e.getMessage() + "\n");
+        }
+
+        editorPanel.getTextArea().requestFocus();
     }
 }
