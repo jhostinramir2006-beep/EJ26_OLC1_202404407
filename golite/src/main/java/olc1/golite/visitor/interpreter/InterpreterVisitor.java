@@ -752,37 +752,77 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(TypeOfNode.Context ctx) {
-        ValueWrapper val = Visit(ctx.expression);
-        return new StringValue(val.getTypeName(), val.line(), val.column());
+
+        ValueWrapper value = Visit(ctx.expression);
+
+        return new StringValue(
+            value.getTypeName(),
+            value.line(),
+            value.column()
+        );
     }
 
     @Override
     public ValueWrapper visit(AtoiNode.Context ctx) {
-        ValueWrapper val = Visit(ctx.expression);
 
-        if (!(val instanceof StringValue s)) {
-            throw new RuntimeException("strconv.Atoi requiere string");
+        ValueWrapper value = Visit(ctx.expression);
+
+        if (!(value instanceof StringValue s)) {
+            throw new RuntimeException(
+                "strconv.Atoi solo acepta valores string"
+            );
         }
 
         try {
-            return new IntValue(Integer.parseInt(s.value()), s.line(), s.column());
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("No se puede convertir a int: " + s.value());
+
+            int numero = Integer.parseInt(s.value());
+
+            return new IntValue(
+                numero,
+                s.line(),
+                s.column()
+            );
+
+        } catch (NumberFormatException ex) {
+
+            throw new RuntimeException(
+                "No se puede convertir \"" +
+                s.value() +
+                "\" a int"
+            );
+
         }
     }
 
     @Override
     public ValueWrapper visit(ParseFloatNode.Context ctx) {
-        ValueWrapper val = Visit(ctx.expression);
 
-        if (!(val instanceof StringValue s)) {
-            throw new RuntimeException("strconv.ParseFloat requiere string");
+        ValueWrapper value = Visit(ctx.expression);
+
+        if (!(value instanceof StringValue s)) {
+            throw new RuntimeException(
+                "strconv.ParseFloat solo acepta valores string"
+            );
         }
 
         try {
-            return new DecimalValue(Double.parseDouble(s.value()), s.line(), s.column());
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("No se puede convertir a float64: " + s.value());
+
+            double numero = Double.parseDouble(s.value());
+
+            return new DecimalValue(
+                numero,
+                s.line(),
+                s.column()
+            );
+
+        } catch (NumberFormatException ex) {
+
+            throw new RuntimeException(
+                "No se puede convertir \"" +
+                s.value() +
+                "\" a float64"
+            );
+
         }
     }
 
