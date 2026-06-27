@@ -161,10 +161,6 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new VarDeclInfer(n, e, nleft, nright); :}
                 | kwFmt dot id lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new FmtPrintln(a); :}
-                | kwBreak FIN
-                    {: RESULT = new BreakNode(); :}
-                | kwContinue FIN
-                    {: RESULT = new ContinueNode(); :}
                 | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
                 | id:n inc FIN
@@ -199,6 +195,10 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new StructMethodCall(new VarRef(n, nleft, nright), m, a); :}
                 | id:n lparen ARGUMENTOS:a rparen FIN
                     {: RESULT = new FunctionCall(n, a); :}
+                | kwBreak:b FIN
+                    {: RESULT = new BreakNode(bleft, bright); :}
+                | kwContinue:c FIN
+                    {: RESULT = new ContinueNode(cleft, cright); :}
 ;
 
 FUNCION ::= kwFunc id:n lparen PARAMETROS:p rparen TIPO:t BLOQUE:b
@@ -376,8 +376,6 @@ GLOBALS ::= GLOBALS:g GLOBAL:x
 
           | error scol
                 {: RESULT = new ArrayList(); :}
-        | GLOBALS:g error
-                {: RESULT = g; :}
 ;
 GLOBAL ::= FUNCION:f
             {: RESULT = f; :}
@@ -403,11 +401,9 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
             | decimal:e                     {: RESULT = new Decimal(new Double(e),   eleft, eright); :}
             | EXPRESION:a gt EXPRESION:b {: RESULT = new GreaterThan(a,b); :}
             | EXPRESION:a lt EXPRESION:b {: RESULT = new LessThan(a,b); :}
-            | EXPRESION:a eq EXPRESION:b {: RESULT = new Equals(a,b); :}
             | EXPRESION:a neq EXPRESION:b {: RESULT = new NotEquals(a,b); :}
             | EXPRESION:a ge EXPRESION:b {: RESULT = new GreaterEqual(a,b); :}
             | EXPRESION:a le EXPRESION:b {: RESULT = new LessEqual(a,b); :}
-            | EXPRESION:a and EXPRESION:b {: RESULT = new And(a,b); :}
             | EXPRESION:a or  EXPRESION:b {: RESULT = new Or(a,b); :}
             | not EXPRESION:a             {: RESULT = new Not(a); :}
             | EXPRESION:a mod EXPRESION:b {: RESULT = new Mod(a,b); :}
@@ -438,4 +434,8 @@ EXPRESION ::= minus EXPRESION:a             {: RESULT = new Negate(a); :}%prec U
                 {: RESULT = new StructInlineLiteral(v); :}
             | ACCESO:a
                 {: RESULT = a; :}
+            | EXPRESION:a eq EXPRESION:b
+                {: RESULT = new Equals(a, b, aleft, aright); :}
+            | EXPRESION:a and EXPRESION:b
+                {: RESULT = new And(a, b, aleft, aright); :}
 ;

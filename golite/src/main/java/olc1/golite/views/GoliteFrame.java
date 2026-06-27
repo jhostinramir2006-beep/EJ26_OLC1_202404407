@@ -104,36 +104,29 @@ public class GoliteFrame extends JFrame {
         consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
         editorPanel.getTextArea().requestFocus();
     }
-
     private void errors() {
-        cleanConsole();
-
         if (lexer == null || parser == null) {
-            consoleTextArea.append("Aún no se han ejecutado nada.\n");
+            JOptionPane.showMessageDialog(
+                this,
+                "Aún no se ha ejecutado nada.",
+                "Reporte de errores",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        consoleTextArea.append("Errores léxicos:\n");
+        java.util.List<GoliteError> semantic =
+                interpreter != null ? interpreter.semanticErrors : new java.util.ArrayList<>();
 
-        for (GoliteError error : lexer.errors) {
-            consoleTextArea.append(error.toString() + "\n");
-        }
+        ErrorReportDialog dialog = new ErrorReportDialog(
+                this,
+                lexer.errors,
+                parser.errors,
+                semantic
+        );
 
-        consoleTextArea.append("\nErrores sintácticos:\n");
-
-        for (GoliteError error : parser.errors) {
-            consoleTextArea.append(error.toString() + "\n");
-        }
-
-        consoleTextArea.append("\nErrores semánticos:\n");
-
-        if (interpreter != null) {
-            for (GoliteError error : interpreter.semanticErrors) {
-                consoleTextArea.append(error.toString() + "\n");
-            }
-        }
+        dialog.setVisible(true);
     }
-
     private void cleanConsole() {
         consoleTextArea.setText("CONSOLA  -  LABORATORIO DE ORGANIZACION DE LENGUAJES Y COMPILADORES 1\n\n");
     }

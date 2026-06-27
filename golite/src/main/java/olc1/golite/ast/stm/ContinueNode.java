@@ -4,9 +4,21 @@ import olc1.golite.ast.ASTNode;
 import olc1.golite.visitor.Visitor;
 
 public class ContinueNode implements ASTNode {
+    private final int line;
+    private final int column;
+
+    public ContinueNode(int line, int column) {
+        this.line = line;
+        this.column = column;
+    }
 
     public static class Context {
+        public final int line;
+        public final int column;
+
         public Context(ContinueNode node) {
+            this.line = node.line;
+            this.column = node.column;
         }
     }
 

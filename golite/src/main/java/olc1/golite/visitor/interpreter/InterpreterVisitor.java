@@ -222,27 +222,36 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper left  = Visit(ctx.left);
         ValueWrapper right = Visit(ctx.right);
 
-        // VALIDACION DE DIVISION POR 0
+        if (left instanceof ErrorValue || right instanceof ErrorValue) {
+            return new ErrorValue(left.line(), left.column());
+        }
+
         if ((right instanceof IntValue r1 && r1.value() == 0) ||
             (right instanceof DecimalValue r2 && r2.value() == 0.0)) {
-            throw new RuntimeException("Error: Division por 0");
+            throw new SemanticException(
+                "Division entre cero",
+                left.line(),
+                left.column()
+            );
         }
 
         return switch (left) {
             case IntValue l when right instanceof IntValue r ->
-                new IntValue(l.value() / r.value(), l.line(), l.column());
+                new IntValue(l.value() / r.value(), left.line(), left.column());
 
             case IntValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+                new DecimalValue(l.value() / r.value(),left.line(), left.column());
 
             case DecimalValue l when right instanceof IntValue r ->
-                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+                new DecimalValue(l.value() / r.value(),left.line(), left.column());
 
             case DecimalValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() / r.value(), l.line(), l.column());
+                new DecimalValue(l.value() / r.value(), left.line(), left.column());
 
-            default -> throw new RuntimeException(
-                "Operacion invalida: " + left.getTypeName() + " / " + right.getTypeName()
+            default -> throw new SemanticException(
+                "Operacion invalida: " + left.getTypeName() + " / " + right.getTypeName(),
+                left.line(),
+                left.column()
             );
         };
     }
@@ -264,22 +273,35 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         return defaultVoid;
     }
 
-    @Override
-    public ValueWrapper visit(Statments.Context ctx) {
-        for (ASTNode statement : ctx.statements) {
-            if (statement != null) {
-                try {
-                    Visit(statement);
-                } catch (BreakException | ContinueException | ReturnException e) {
-                    throw e;
-                } catch (Exception e) {
-                    addSemanticError(e.getMessage(), -1, -1);
-                }
+@Override
+public ValueWrapper visit(Statments.Context ctx) {
+    for (ASTNode statement : ctx.statements) {
+        if (statement == null) continue;
+
+        try {
+            Visit(statement);
+
+        } catch (ReturnException e) {
+            throw e;
+
+        } catch (SemanticException e) {
+            addSemanticError(e.getMessage(), e.line, e.column);
+
+        } catch (BreakException e) {
+            addSemanticError("Sentencia break fuera de un ciclo", -1, -1);
+
+        } catch (ContinueException e) {
+            addSemanticError("Sentencia continue fuera de un ciclo", -1, -1);
+
+        } catch (Exception e) {
+            if (e.getMessage() != null) {
+                addSemanticError(e.getMessage(), -1, -1);
             }
         }
-
-        return defaultVoid;
     }
+
+    return defaultVoid;
+}
 
     @Override
     public ValueWrapper visit(Paren.Context ctx) {
@@ -304,7 +326,11 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper val = getVariable(ctx.name);
 
         if (val == null) {
-            throw new RuntimeException("Variable \"" + ctx.name + "\" no declarada");
+           throw new SemanticException(
+                "Variable \"" + ctx.name + "\" no declarada",
+                ctx.line,
+                ctx.column
+            );
         }
 
         return val;
@@ -315,16 +341,29 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper old = getVariable(ctx.name);
 
         if (old == null) {
-            throw new RuntimeException("Variable \"" + ctx.name + "\" no declarada");
+            throw new SemanticException(
+                "Variable \"" + ctx.name + "\" no declarada",
+                ctx.line,
+                ctx.column
+            );
         }
 
         ValueWrapper val = Visit(ctx.value);
 
+        if (val instanceof ErrorValue) {
+            setVariable(ctx.name, val);
+            return defaultVoid;
+        }
+
         if (old.getTypeName().equals("float64") && val.getTypeName().equals("int")) {
             IntValue i = (IntValue) val;
-            val = new DecimalValue(i.value(), -1, -1);
-        } else {
-            ensureAssignable(old.getTypeName(), val);
+            val = new DecimalValue(i.value(), ctx.line, ctx.column);
+        } else if (!old.getTypeName().equals(val.getTypeName())) {
+            throw new SemanticException(
+                "No se puede asignar " + val.getTypeName() + " a " + old.getTypeName(),
+                ctx.line,
+                ctx.column
+            );
         }
 
         setVariable(ctx.name, val);
@@ -397,30 +436,36 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper left  = Visit(ctx.left);
         ValueWrapper right = Visit(ctx.right);
 
+        if (left instanceof ErrorValue || right instanceof ErrorValue) {
+            return new ErrorValue(ctx.line, ctx.column);
+        }
+
         return switch (left) {
             case IntValue l when right instanceof IntValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
             case DecimalValue l when right instanceof DecimalValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
             case IntValue l when right instanceof DecimalValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
             case DecimalValue l when right instanceof IntValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
             case BoolValue l when right instanceof BoolValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
             case StringValue l when right instanceof StringValue r ->
-                new BoolValue(l.value().equals(r.value()), l.line(), l.column());
+                new BoolValue(l.value().equals(r.value()), ctx.line, ctx.column);
 
             case RuneValue l when right instanceof RuneValue r ->
-                new BoolValue(l.value() == r.value(), l.line(), l.column());
+                new BoolValue(l.value() == r.value(), ctx.line, ctx.column);
 
-            default -> throw new RuntimeException(
-                "Operacion invalida: " + left.getTypeName() + " == " + right.getTypeName()
+            default -> throw new SemanticException(
+                "Operacion invalida: " + left.getTypeName() + " == " + right.getTypeName(),
+                ctx.line,
+                ctx.column
             );
         };
     }
@@ -512,21 +557,37 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     public ValueWrapper visit(And.Context ctx) {
         ValueWrapper left = Visit(ctx.left);
 
+        if (left instanceof ErrorValue) {
+            return new ErrorValue(ctx.line, ctx.column);
+        }
+
         if (!(left instanceof BoolValue l)) {
-            throw new RuntimeException("Operacion invalida: && requiere booleanos");
+            throw new SemanticException(
+                "Operacion invalida: && requiere booleanos",
+                ctx.line,
+                ctx.column
+            );
         }
 
         if (!l.value()) {
-            return new BoolValue(false, l.line(), l.column());
+            return new BoolValue(false, ctx.line, ctx.column);
         }
 
         ValueWrapper right = Visit(ctx.right);
 
-        if (!(right instanceof BoolValue r)) {
-            throw new RuntimeException("Operacion invalida: && requiere booleanos");
+        if (right instanceof ErrorValue) {
+            return new ErrorValue(ctx.line, ctx.column);
         }
 
-        return new BoolValue(r.value(), r.line(), r.column());
+        if (!(right instanceof BoolValue r)) {
+            throw new SemanticException(
+                "Operacion invalida: && requiere booleanos",
+                ctx.line,
+                ctx.column
+            );
+        }
+
+        return new BoolValue(r.value(), ctx.line, ctx.column);
     }
     @Override
     public ValueWrapper visit(Or.Context ctx) {
@@ -577,29 +638,45 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper current = getVariable(ctx.name);
 
         if (current == null) {
-            throw new RuntimeException("Variable no definida: " + ctx.name);
+            throw new SemanticException(
+                "Variable \"" + ctx.name + "\" no declarada",
+                ctx.line,
+                ctx.column
+            );
         }
 
         ValueWrapper right = Visit(ctx.value);
 
+        if (right instanceof ErrorValue) {
+            setVariable(ctx.name, right);
+            return defaultVoid;
+        }
+
+        if (current.getTypeName().equals("int") && right.getTypeName().equals("float64")) {
+            throw new SemanticException(
+                "No se puede aplicar += float64 a int",
+                ctx.line,
+                ctx.column
+            );
+        }
+
         ValueWrapper result = switch (current) {
             case IntValue l when right instanceof IntValue r ->
-                new IntValue(l.value() + r.value(), l.line(), l.column());
-
-            case IntValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+                new IntValue(l.value() + r.value(), ctx.line, ctx.column);
 
             case DecimalValue l when right instanceof IntValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+                new DecimalValue(l.value() + r.value(), ctx.line, ctx.column);
 
             case DecimalValue l when right instanceof DecimalValue r ->
-                new DecimalValue(l.value() + r.value(), l.line(), l.column());
+                new DecimalValue(l.value() + r.value(), ctx.line, ctx.column);
 
             case StringValue l when right instanceof StringValue r ->
-                new StringValue(l.value() + r.value(), l.line(), l.column());
+                new StringValue(l.value() + r.value(), ctx.line, ctx.column);
 
-            default -> throw new RuntimeException(
-                "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName()
+            default -> throw new SemanticException(
+                "Operacion invalida: " + current.getTypeName() + " += " + right.getTypeName(),
+                ctx.line,
+                ctx.column
             );
         };
 
@@ -714,61 +791,120 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(FmtPrintln.Context ctx) {
-        for (int i = 0; i < ctx.arguments.size(); i++) {
-            if (i > 0) output += " ";
-            output += Visit(ctx.arguments.get(i)).toString();
+        StringBuilder linea = new StringBuilder();
+
+        for (ASTNode arg : ctx.arguments) {
+            try {
+                ValueWrapper value = Visit(arg);
+
+                if (value instanceof ErrorValue) {
+                    continue;
+                }
+
+                if (linea.length() > 0) {
+                    linea.append(" ");
+                }
+
+                linea.append(value.toString());
+
+            } catch (SemanticException e) {
+                addSemanticError(e.getMessage(), e.line, e.column);
+                continue;
+
+            } catch (Exception e) {
+                if (e.getMessage() != null) {
+                    addSemanticError(e.getMessage(), -1, -1);
+                }
+                continue;
+            }
         }
-        output += "\n";
+
+        if (linea.length() > 0) {
+            output += linea + "\n";
+        }
+
         return defaultVoid;
     }
-
     @Override
     public ValueWrapper visit(BreakNode.Context ctx) {
-        throw new BreakException();
+        throw new SemanticException(
+            "Sentencia break fuera de un ciclo",
+            ctx.line,
+            ctx.column
+        );
     }
 
     @Override
     public ValueWrapper visit(ContinueNode.Context ctx) {
-        throw new ContinueException();
+        throw new SemanticException(
+            "Sentencia continue fuera de un ciclo",
+            ctx.line,
+            ctx.column
+        );
     }
     @Override
     public ValueWrapper visit(VarDeclInfer.Context ctx) {
+        if (ctx.name.equals("__error_id__")) {
+            return defaultVoid;
+        }
         ValueWrapper val = Visit(ctx.value);
         currentScope().put(ctx.name, val);
         return defaultVoid;
     }
     @Override
     public ValueWrapper visit(VarDecl.Context ctx) {
+
+        if (ctx.name.equals("__error_id__")) {
+            return defaultVoid;
+        }
+
         if (currentScope().containsKey(ctx.name)) {
-            throw new RuntimeException("Variable \"" + ctx.name + "\" ya declarada");
+            throw new SemanticException(
+                "Variable \"" + ctx.name + "\" ya declarada",
+                ctx.line,
+                ctx.column
+            );
         }
 
         ValueWrapper val;
 
         if (ctx.value != null) {
-            val = Visit(ctx.value);
+            try {
+                val = Visit(ctx.value);
 
-            if (ctx.type.equals("float64") && val.getTypeName().equals("int")) {
-                IntValue i = (IntValue) val;
-                val = new DecimalValue(i.value(), ctx.line, ctx.column);
-            } else {
-                ensureAssignable(ctx.type, val);
+                if (val instanceof ErrorValue) {
+                    currentScope().put(ctx.name, val);
+                    return defaultVoid;
+                }
+
+                if (ctx.type.equals("float64") && val.getTypeName().equals("int")) {
+                    IntValue i = (IntValue) val;
+                    val = new DecimalValue(i.value(), ctx.line, ctx.column);
+                } else {
+                    if (!ctx.type.equals(val.getTypeName())) {
+                        throw new SemanticException(
+                            "No se puede asignar " + val.getTypeName() + " a " + ctx.type,
+                            ctx.line,
+                            ctx.column
+                        );
+                    }
+                }
+
+            } catch (SemanticException e) {
+                currentScope().put(ctx.name, new ErrorValue(ctx.line, ctx.column));
+                throw e;
+
+            } catch (Exception e) {
+                currentScope().put(ctx.name, new ErrorValue(ctx.line, ctx.column));
+                throw new SemanticException(
+                    e.getMessage(),
+                    ctx.line,
+                    ctx.column
+                );
             }
 
         } else {
-            val = switch (ctx.type) {
-                case "int" -> new IntValue(0, ctx.line, ctx.column);
-                case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
-                case "string" -> new StringValue("", ctx.line, ctx.column);
-                case "bool" -> new BoolValue(false, ctx.line, ctx.column);
-                case "rune" -> new RuneValue('\0', ctx.line, ctx.column);
-                case "[]int" -> new SliceValue("int", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                case "[]float64" -> new SliceValue("float64", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                case "[]string" -> new SliceValue("string", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                case "[]bool" -> new SliceValue("bool", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                case "[]rune" -> new SliceValue("rune", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                default -> defaultValue(ctx.type);
-            };
+            val = defaultValue(ctx.type);
         }
 
         currentScope().put(ctx.name, val);
@@ -837,14 +973,25 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper value = Visit(ctx.expression);
 
         if (!(value instanceof StringValue s)) {
-            throw new RuntimeException(
-                "strconv.Atoi solo acepta valores string"
+            throw new SemanticException(
+                "strconv.Atoi solo acepta valores string",
+                -1,
+                -1
+            );
+        }
+
+        String text = s.value();
+
+        if (text.contains(".")) {
+            throw new SemanticException(
+                "Cadena \"" + text + "\" no es un entero valido para Atoi",
+                s.line(),
+                s.column()
             );
         }
 
         try {
-
-            int numero = Integer.parseInt(s.value());
+            int numero = Integer.parseInt(text);
 
             return new IntValue(
                 numero,
@@ -853,13 +1000,11 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             );
 
         } catch (NumberFormatException ex) {
-
-            throw new RuntimeException(
-                "No se puede convertir \"" +
-                s.value() +
-                "\" a int"
+            throw new SemanticException(
+                "Cadena \"" + text + "\" no puede convertirse a int",
+                s.line(),
+                s.column()
             );
-
         }
     }
 

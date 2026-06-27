@@ -82,6 +82,13 @@ str_lex = ({normal_char} | {escape_char})*
     addLexicalError("Identificador invalido con $: " + yytext());
     return new Symbol(sym.id, yyline, yycolumn, "__error_id__");
 }
+"¬"{letter}({letter}|{digit}|_)* {
+    addLexicalError("Identificador invalido: \"" + yytext() + "\"");
+    return new Symbol(sym.id, yyline, yycolumn, "__error_id__");
+}
+"var"[ \t\f]+{letter}({letter}|{digit})*"."{letter}({letter}|{digit})*[^\n\r]* {
+    addLexicalError("Identificador invalido con punto: " + yytext());
+}
 \"{str_lex}\" {
     return new Symbol(sym.string, yyline, yycolumn, yytext());
 }

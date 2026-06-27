@@ -1,6 +1,7 @@
 package olc1.golite.reports;
 
 public class GoliteError {
+
     private final String type;
     private final String description;
     private final int line;
@@ -13,8 +14,31 @@ public class GoliteError {
         this.column = column;
     }
 
+    // GETTERS
+    public String getType() {
+        return type;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public int getLine() {
+        return line;
+    }
+
+    public int getColumn() {
+        return column;
+    }
+
     @Override
     public String toString() {
-        return String.format("Error %s: %s en la linea %d, columna %d", type, description, line, column);
-    }    
+        return String.format(
+            "Error %s: %s en la linea %d, columna %d",
+            getType(),
+            getDescription(),
+            getLine(),
+            getColumn()
+        );
+    }
 }
