@@ -9,8 +9,11 @@ public class Statments implements ASTNode {
     private final List<ASTNode> statements;
 
     public Statments(ASTNode statement) {
-         this.statements = new ArrayList<>();
-         this.statements.add(statement);
+        this.statements = new ArrayList<>();
+
+        if (statement != null) {
+            this.statements.add(statement);
+        }
     }
 
     public void add(ASTNode statement) {

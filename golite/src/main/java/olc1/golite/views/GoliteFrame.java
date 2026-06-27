@@ -21,6 +21,7 @@ import java.nio.file.Files;
 public class GoliteFrame extends JFrame {
     private final EditorPanel editorPanel;
     private final JTextArea consoleTextArea;
+    private InterpreterVisitor interpreter;
     private Lexer lexer;
     private parser parser;
 
@@ -64,26 +65,40 @@ public class GoliteFrame extends JFrame {
     private void run() {
         cleanConsole();
 
+        lexer = null;
+        parser = null;
+        interpreter = null;
+
         try {
             lexer = new Lexer(new BufferedReader(new StringReader(editorPanel.getText())));
             parser = new parser(lexer);
 
             Object result = parser.parse().value;
 
-            if (result == null) {
-                consoleTextArea.append("No se pudo generar AST.\n");
+            if (!(result instanceof ASTNode ast)) {
+                consoleTextArea.append("No se pudo ejecutar porque no se generó AST recuperable.\n");
                 return;
             }
 
-            ASTNode ast = (ASTNode) result;
+            interpreter = new InterpreterVisitor();
 
-            InterpreterVisitor interpreter = new InterpreterVisitor();
-            interpreter.Visit(ast);
+            try {
+                interpreter.Visit(ast);
+            } catch (Exception e) {
+                interpreter.semanticErrors.add(
+                    new GoliteError("Semantico", e.getMessage(), -1, -1)
+                );
+            }
 
             consoleTextArea.append(interpreter.output);
 
+            if (!lexer.errors.isEmpty() || !parser.errors.isEmpty()
+                    || !interpreter.semanticErrors.isEmpty()) {
+                consoleTextArea.append("\nEjecución finalizada con errores. Revise el reporte de errores.\n");
+            }
+
         } catch (Exception e) {
-            consoleTextArea.append("Error: " + e.getMessage() + "\n");
+            consoleTextArea.append("No se pudo ejecutar completamente. Revise el reporte de errores.\n");
         }
 
         consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
@@ -108,6 +123,14 @@ public class GoliteFrame extends JFrame {
 
         for (GoliteError error : parser.errors) {
             consoleTextArea.append(error.toString() + "\n");
+        }
+
+        consoleTextArea.append("\nErrores semánticos:\n");
+
+        if (interpreter != null) {
+            for (GoliteError error : interpreter.semanticErrors) {
+                consoleTextArea.append(error.toString() + "\n");
+            }
         }
     }
 

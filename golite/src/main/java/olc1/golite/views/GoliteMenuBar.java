@@ -38,8 +38,8 @@ public class GoliteMenuBar extends JMenuBar {
         aboutItem = new JMenuItem("Acerca de");
         helpMenu.add(aboutItem);
 
-        add(fileMenu);
         add(loadButton);
+        add(fileMenu);
         add(runButton);
         add(reportMenu);
         add(cleanButton);

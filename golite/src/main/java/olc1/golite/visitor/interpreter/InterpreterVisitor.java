@@ -1,6 +1,8 @@
 package olc1.golite.visitor.interpreter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import olc1.golite.ast.ASTNode;
@@ -18,7 +20,7 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     private boolean insideMethod = false;
     private final Map<String, StructDecl.Context> structDefs = new HashMap<>(); 
     private final Map<String, StructMethodDecl.Context> structMethods = new HashMap<>();
-    public final java.util.List<GoliteError> semanticErrors = new java.util.ArrayList<>();
+    public final List<GoliteError> semanticErrors = new ArrayList<>();
     private final java.util.Deque<Map<String, ValueWrapper>> scopes = new java.util.ArrayDeque<>();
     private final Map<String, FunctionDecl.Context> functions = new HashMap<>();
 
@@ -60,6 +62,39 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
                 yield new VoidValue(-1, -1);
             }
         };
+    }
+    private void addSemanticError(String message, int line, int column) {
+        semanticErrors.add(new GoliteError("Semantico", message, line, column));
+    }
+    private void ensureAssignable(String expected, ValueWrapper value) {
+        String actual = value.getTypeName();
+
+        if (!expected.equals(actual)) {
+            throw new RuntimeException(
+                "No se puede asignar " + actual + " a " + expected
+            );
+        }
+    }
+    private void ensureBool(ValueWrapper value, String context) {
+        if (!value.getTypeName().equals("bool")) {
+            throw new RuntimeException(
+                context + " debe ser bool, se obtuvo " + value.getTypeName()
+            );
+        }
+    }
+    private void ensureInt(ValueWrapper value, String context) {
+        if (!value.getTypeName().equals("int")) {
+            throw new RuntimeException(
+                context + " debe ser int, se obtuvo " + value.getTypeName()
+            );
+        }
+    }
+    private void ensureSameType(ValueWrapper a, ValueWrapper b, String op) {
+        if (!a.getTypeName().equals(b.getTypeName())) {
+            throw new RuntimeException(
+                "Tipos incompatibles " + a.getTypeName() + " " + op + " " + b.getTypeName()
+            );
+        }
     }
     private ValueWrapper copyIfPrimitive(ValueWrapper value) {
         if (value instanceof IntValue v) {
@@ -231,11 +266,18 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
     @Override
     public ValueWrapper visit(Statments.Context ctx) {
-        for (ASTNode statment : ctx.statements) {
-            if (statment != null) {
-                Visit(statment);
+        for (ASTNode statement : ctx.statements) {
+            if (statement != null) {
+                try {
+                    Visit(statement);
+                } catch (BreakException | ContinueException | ReturnException e) {
+                    throw e;
+                } catch (Exception e) {
+                    addSemanticError(e.getMessage(), -1, -1);
+                }
             }
         }
+
         return defaultVoid;
     }
 
@@ -262,7 +304,7 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
         ValueWrapper val = getVariable(ctx.name);
 
         if (val == null) {
-            throw new RuntimeException("Variable no definida: " + ctx.name);
+            throw new RuntimeException("Variable \"" + ctx.name + "\" no declarada");
         }
 
         return val;
@@ -270,7 +312,21 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
 
     @Override
     public ValueWrapper visit(Assign.Context ctx) {
+        ValueWrapper old = getVariable(ctx.name);
+
+        if (old == null) {
+            throw new RuntimeException("Variable \"" + ctx.name + "\" no declarada");
+        }
+
         ValueWrapper val = Visit(ctx.value);
+
+        if (old.getTypeName().equals("float64") && val.getTypeName().equals("int")) {
+            IntValue i = (IntValue) val;
+            val = new DecimalValue(i.value(), -1, -1);
+        } else {
+            ensureAssignable(old.getTypeName(), val);
+        }
+
         setVariable(ctx.name, val);
         return defaultVoid;
     }
@@ -683,22 +739,35 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
     }
     @Override
     public ValueWrapper visit(VarDecl.Context ctx) {
+        if (currentScope().containsKey(ctx.name)) {
+            throw new RuntimeException("Variable \"" + ctx.name + "\" ya declarada");
+        }
+
         ValueWrapper val;
 
         if (ctx.value != null) {
             val = Visit(ctx.value);
+
+            if (ctx.type.equals("float64") && val.getTypeName().equals("int")) {
+                IntValue i = (IntValue) val;
+                val = new DecimalValue(i.value(), ctx.line, ctx.column);
+            } else {
+                ensureAssignable(ctx.type, val);
+            }
+
         } else {
             val = switch (ctx.type) {
                 case "int" -> new IntValue(0, ctx.line, ctx.column);
                 case "float64" -> new DecimalValue(0.0, ctx.line, ctx.column);
                 case "string" -> new StringValue("", ctx.line, ctx.column);
                 case "bool" -> new BoolValue(false, ctx.line, ctx.column);
+                case "rune" -> new RuneValue('\0', ctx.line, ctx.column);
                 case "[]int" -> new SliceValue("int", new java.util.ArrayList<>(), ctx.line, ctx.column);
                 case "[]float64" -> new SliceValue("float64", new java.util.ArrayList<>(), ctx.line, ctx.column);
                 case "[]string" -> new SliceValue("string", new java.util.ArrayList<>(), ctx.line, ctx.column);
                 case "[]bool" -> new SliceValue("bool", new java.util.ArrayList<>(), ctx.line, ctx.column);
                 case "[]rune" -> new SliceValue("rune", new java.util.ArrayList<>(), ctx.line, ctx.column);
-                default -> new VoidValue(ctx.line, ctx.column);
+                default -> defaultValue(ctx.type);
             };
         }
 
@@ -901,13 +970,17 @@ public class InterpreterVisitor implements Visitor<ValueWrapper> {
             return defaultVoid;
         }
 
+        Statments globalStatements = new Statments(null);
+
         for (ASTNode node : ctx.functions) {
             if (!(node instanceof StructDecl) &&
                 !(node instanceof FunctionDecl) &&
                 !(node instanceof StructMethodDecl)) {
-                Visit(node);
+                globalStatements.add(node);
             }
         }
+
+        Visit(globalStatements);
 
         return defaultVoid;
     }

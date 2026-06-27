@@ -120,8 +120,16 @@ INICIO ::= GLOBALS:g
 ;
 
 INSTRUCCIONES ::= INSTRUCCIONES:is INSTRUCCION:i
-                    {: if(i != null) is.add(i); RESULT = is; :}                
-                | INSTRUCCION:i                      {: RESULT = new Statments(i); :}
+                    {: if(i != null) is.add(i); RESULT = is; :}
+
+                | INSTRUCCION:i
+                    {: RESULT = new Statments(i); :}
+
+                | INSTRUCCIONES:is error scol
+                    {: RESULT = is; :}
+
+                | error scol
+                    {: RESULT = new Statments(null); :}
 ;
 
 INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = new Imprimir(e); :}
@@ -141,6 +149,12 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new ForNode(i, c, u, b); :}
                 | kwFor lparen FOR_INIT:i scol EXPRESION:c scol FOR_UPDATE:u rparen BLOQUE:b
                     {: RESULT = new ForNode(i, c, u, b); :}
+                | kwVar id:n dot id:a TIPO:t assign EXPRESION:e FIN
+                    {: RESULT = null; :}
+                | kwVar id:n dot id:a TIPO:t FIN
+                    {: RESULT = null; :}
+                | kwVar id:n dot id:a error FIN
+                    {: RESULT = null; :}
                 | kwVar id:n TIPO:t assign EXPRESION:e FIN
                     {: RESULT = new VarDecl(n, t, e, nleft, nright); :}
                 | kwVar id:n assign EXPRESION:e FIN
@@ -151,7 +165,6 @@ INSTRUCCION ::= imprimir lparen EXPRESION:e rparen FIN              {: RESULT = 
                     {: RESULT = new BreakNode(); :}
                 | kwContinue FIN
                     {: RESULT = new ContinueNode(); :}
-                | error scol                                                {: RESULT = null; :}
                 | id:n plusAssign EXPRESION:e FIN                          {: RESULT = new PlusAssign(n, e, nleft, nright); :}
                 | id:n minusAssign EXPRESION:e FIN                          {: RESULT = new MinusAssign(n, e, nleft, nright); :}
                 | id:n inc FIN
@@ -351,8 +364,20 @@ METHOD_FUNCION ::= kwFunc lparen id:ref id:structName rparen id:name lparen PARA
 ;
 GLOBALS ::= GLOBALS:g GLOBAL:x
                 {: if (x != null) g.add(x); RESULT = g; :}
+
+          | GLOBALS:g error scol
+                {: RESULT = g; :}
+
+          | GLOBALS:g error rbrace
+                {: RESULT = g; :}
+
           | GLOBAL:x
                 {: ArrayList g = new ArrayList(); if (x != null) g.add(x); RESULT = g; :}
+
+          | error scol
+                {: RESULT = new ArrayList(); :}
+        | GLOBALS:g error
+                {: RESULT = g; :}
 ;
 GLOBAL ::= FUNCION:f
             {: RESULT = f; :}

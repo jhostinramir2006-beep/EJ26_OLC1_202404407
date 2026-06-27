@@ -33,6 +33,15 @@ import olc1.golite.reports.GoliteError;
     // }
 
     public final List<GoliteError> errors = new ArrayList<>();
+
+private void addLexicalError(String message) {
+    errors.add(new GoliteError(
+        "Lexico",
+        message,
+        yyline + 1,
+        yycolumn + 1
+    ));
+}
 %}
 
 %init{
@@ -62,7 +71,20 @@ str_lex = ({normal_char} | {escape_char})*
 "/*"([^*]|\*+[^*/])*\*+"/" {
     /* ignorar */
 }
+// Identificador inválido: 1variable
+{digit}+{letter}({letter}|{digit}|_)* {
+    addLexicalError("Identificador invalido: \"" + yytext() + "\"");
+    return new Symbol(sym.id, yyline, yycolumn, "__error_id__");
+}
 
+// Identificador inválido con $
+"$"{letter}({letter}|{digit}|_)* {
+    addLexicalError("Identificador invalido con $: " + yytext());
+    return new Symbol(sym.id, yyline, yycolumn, "__error_id__");
+}
+\"{str_lex}\" {
+    return new Symbol(sym.string, yyline, yycolumn, yytext());
+}
 // Numbers
 {digit}+\.{digit}+  { return new Symbol(sym.decimal, yyline + 1, yycolumn + 1, yytext()); }
 {digit}+            { return new Symbol(sym.integer, yyline + 1, yycolumn + 1, yytext()); }
@@ -90,45 +112,38 @@ str_lex = ({normal_char} | {escape_char})*
 
 "+"     { return new Symbol(sym.plus, yyline, yycolumn, yytext()); }
 "-"     { return new Symbol(sym.minus, yyline, yycolumn, yytext()); }
-
 "*"     { return new Symbol(sym.times, yyline, yycolumn, yytext()); }
 "/"     { return new Symbol(sym.slash, yyline, yycolumn, yytext()); }
 
 ">"     { return new Symbol(sym.gt, yyline, yycolumn, yytext()); }
 "<"     { return new Symbol(sym.lt, yyline, yycolumn, yytext()); }
-
 "="     { return new Symbol(sym.assign, yyline, yycolumn, yytext()); }
-
 "!"     { return new Symbol(sym.not, yyline, yycolumn, yytext()); }
-
 "%"     { return new Symbol(sym.mod, yyline, yycolumn, yytext()); }
 
 "."     { return new Symbol(sym.dot, yyline, yycolumn, yytext()); }
 ","     { return new Symbol(sym.comma, yyline, yycolumn, yytext()); }
-
 ";"     { return new Symbol(sym.scol, yyline, yycolumn, yytext()); }
-
 "{"     { return new Symbol(sym.lbrace, yyline, yycolumn, yytext()); }
-"}"             { return  new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
-"["             { return new Symbol(sym.lbracket, yyline, yycolumn, yytext()); }
-"]"             { return new Symbol(sym.rbracket, yyline, yycolumn, yytext()); }
-// Key Words
+"}"     { return new Symbol(sym.rbrace, yyline, yycolumn, yytext()); }
+"["     { return new Symbol(sym.lbracket, yyline, yycolumn, yytext()); }
+"]"     { return new Symbol(sym.rbracket, yyline, yycolumn, yytext()); }
+":"     { return new Symbol(sym.colon, yyline, yycolumn, yytext()); }
 
+// Keywords
 "for"           { return new Symbol(sym.kwFor, yyline, yycolumn, yytext()); }
 "func"          { return new Symbol(sym.kwFunc, yyline, yycolumn, yytext()); }
-
 "if"            { return new Symbol(sym.kwIf, yyline, yycolumn, yytext()); }
 "else"          { return new Symbol(sym.kwElse, yyline, yycolumn, yytext()); }
-
 "break"         { return new Symbol(sym.kwBreak, yyline, yycolumn, yytext()); }
 "continue"      { return new Symbol(sym.kwContinue, yyline, yycolumn, yytext()); }
-
 "var"           { return new Symbol(sym.kwVar, yyline, yycolumn, yytext()); }
 
 "int"           { return new Symbol(sym.kwInt, yyline, yycolumn, yytext()); }
 "float64"       { return new Symbol(sym.kwFloat64, yyline, yycolumn, yytext()); }
 "string"        { return new Symbol(sym.kwString, yyline, yycolumn, yytext()); }
 "bool"          { return new Symbol(sym.kwBool, yyline, yycolumn, yytext()); }
+"rune"          { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
 
 "true"          { return new Symbol(sym.kwTrue, yyline, yycolumn, yytext()); }
 "false"         { return new Symbol(sym.kwFalse, yyline, yycolumn, yytext()); }
@@ -136,7 +151,6 @@ str_lex = ({normal_char} | {escape_char})*
 "fmt"           { return new Symbol(sym.kwFmt, yyline, yycolumn, yytext()); }
 
 "imprimir"      { return new Symbol(sym.imprimir, yyline, yycolumn, yytext()); }
-"rune"          { return new Symbol(sym.kwRune, yyline, yycolumn, yytext()); }
 "range"         { return new Symbol(sym.kwRange, yyline, yycolumn, yytext()); }
 "reflect"       { return new Symbol(sym.kwReflect, yyline, yycolumn, yytext()); }
 "TypeOf"        { return new Symbol(sym.kwTypeOf, yyline, yycolumn, yytext()); }
@@ -149,7 +163,6 @@ str_lex = ({normal_char} | {escape_char})*
 "switch"        { return new Symbol(sym.kwSwitch, yyline, yycolumn, yytext()); }
 "case"          { return new Symbol(sym.kwCase, yyline, yycolumn, yytext()); }
 "default"       { return new Symbol(sym.kwDefault, yyline, yycolumn, yytext()); }
-":"             { return new Symbol(sym.colon, yyline, yycolumn, yytext()); }
 "return"        { return new Symbol(sym.kwReturn, yyline, yycolumn, yytext()); }
 "slices"        { return new Symbol(sym.kwSlices, yyline, yycolumn, yytext()); }
 "Index"         { return new Symbol(sym.kwIndex, yyline, yycolumn, yytext()); }
@@ -190,10 +203,13 @@ str_lex = ({normal_char} | {escape_char})*
 {letter}({letter}|{digit})* {
     return new Symbol(sym.id, yyline, yycolumn, yytext());
 }
-\"{str_lex}\"               { return new Symbol(sym.string, yyline, yycolumn, yytext()); }
 
 // Ignorar
-{whitespace}    {/* pass */}
+{whitespace} {
+    /* pass */
+}
 
-// Error
-.   { errors.add(new GoliteError("Lexico", "Caracter no reconocido: " + yytext(), yyline, yycolumn)); }
+// Error final
+. {
+    addLexicalError("Caracter no reconocido: '" + yytext() + "'");
+}
