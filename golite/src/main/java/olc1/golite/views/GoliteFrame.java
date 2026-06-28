@@ -17,6 +17,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.awt.Desktop;
+import olc1.golite.reports.AstGraphGenerator;
 
 public class GoliteFrame extends JFrame {
     private final EditorPanel editorPanel;
@@ -55,6 +57,7 @@ public class GoliteFrame extends JFrame {
         menuBar.onTokens(e -> {
             /* TODO: reporte de tokens */ });
         menuBar.onErrors(e -> { errors(); });
+        menuBar.onAst(e -> astReport());
         menuBar.onAbout(e -> JOptionPane.showMessageDialog(
                 this,
                 "GolLite\nVersión 1.0.0\nLaboratorio OLC1",
@@ -167,5 +170,65 @@ public class GoliteFrame extends JFrame {
         }
 
         editorPanel.getTextArea().requestFocus();
+    }
+    private void astReport() {
+        try {
+            lexer = new Lexer(new BufferedReader(new StringReader(editorPanel.getText())));
+            parser = new parser(lexer);
+
+            Object result = parser.parse().value;
+
+            if (!(result instanceof ASTNode ast)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No se pudo generar el AST.",
+                        "Reporte AST",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            AstGraphGenerator generator = new AstGraphGenerator();
+            String dot = generator.generate(ast);
+
+            File dotFile = File.createTempFile("Reporte_AST_", ".dot");
+            File pngFile = new File(
+                    dotFile.getParentFile(),
+                    dotFile.getName().replace(".dot", ".png")
+            );
+
+            Files.writeString(dotFile.toPath(), dot, StandardCharsets.UTF_8);
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    "dot",
+                    "-Tpng",
+                    dotFile.getAbsolutePath(),
+                    "-o",
+                    pngFile.getAbsolutePath()
+            );
+
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0 || !pngFile.exists()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No se pudo generar el PNG. Verifica que Graphviz esté instalado y que el comando dot funcione.",
+                        "Reporte AST",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            Desktop.getDesktop().browse(pngFile.toURI());
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error generando AST: " + e.getMessage(),
+                    "Reporte AST",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 }
